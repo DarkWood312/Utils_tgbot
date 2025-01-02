@@ -55,3 +55,6 @@ class DB:
         async with self as conn:
             await conn.execute("INSERT INTO users VALUES ($1)", user_id)
 
+    async def change_user_setting(self, user_id: int, name: str, value):
+        async with self as conn:
+            await conn.execute(f"UPDATE users SET {name} = $1 WHERE user_id = $2", value, user_id)

@@ -3,6 +3,7 @@ import io
 import logging
 import os
 import re
+from pyexpat.errors import messages
 from typing import Callable
 
 import aiohttp
@@ -11,7 +12,7 @@ from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode, ChatAction
 from aiogram.filters import CommandStart, Command
 from aiogram.fsm.storage.memory import MemoryStorage
-from aiogram.types import Message, InlineKeyboardButton, BufferedInputFile
+from aiogram.types import Message, InlineKeyboardButton, BufferedInputFile, CallbackQuery
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from dotenv import load_dotenv
 
@@ -63,7 +64,7 @@ async def download(url: str, api_key: str, callback_status: Callable = None, **k
                 buffer.write(chunk)
                 downloaded_size += len(chunk)
                 if downloaded_size > 50 * 1024 * 1024:
-                    async with session.get(shortener_api_url, headers={'X-Api-Key': dl_api_key}, json={'longUrl': file_url, 'findIfExists': True}) as shortener:
+                    async with session.post(shortener_api_url, headers={'X-Api-Key': dl_api_key}, json={'longUrl': file_url, 'findIfExists': True}) as shortener:
                         short_url = (await shortener.json())['shortUrl']
 
                     return short_url
@@ -83,7 +84,32 @@ async def commandstart(message: Message):
 
 @dp.message(Command(commands='settings'))
 async def settings_cmd(message: Message):
-    pass
+    settings = await sql.get_user_settings(message.from_user.id)
+    markup = InlineKeyboardBuilder()
+    for k, v in settings.items():
+        k = str(k)
+        v = str(v)
+        markup.row(InlineKeyboardButton(text=k, callback_data=k), InlineKeyboardButton(text=v, callback_data=k))
+    await message.answer('Настройки: ', reply_markup=markup.as_markup())
+
+@dp.callback_query()
+async def callback(call: CallbackQuery):
+    settings = await sql.get_user_settings(call.from_user.id)
+    if call.data in settings:
+        markup = InlineKeyboardBuilder()
+        if call.data == 'videoQuality':
+            for i in ['144', '360', '720', '1080', '1440', '2160', '4320', 'max']:
+                markup.add(InlineKeyboardButton(text=i, callback_data=f'{call.data}_{i}'))
+        elif call.data == 'downloadMode':
+            for i in ['auto', 'audio', 'mute']:
+                markup.add(InlineKeyboardButton(text=i, callback_data=f'{call.data}_{i}'))
+        await call.message.answer(f'{call.data}: ', reply_markup=markup.as_markup())
+    elif any(call.data.startswith(f'{setting}_') for setting in settings):
+        setting, value = call.data.split('_', 1)
+        await sql.change_user_setting(call.from_user.id, setting, value)
+        await call.message.answer('Успешно!')
+    await call.answer()
+
 
 @dp.message(F.text)
 async def text(message: Message):
