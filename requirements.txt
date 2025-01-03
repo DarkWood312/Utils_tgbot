@@ -3,4 +3,5 @@ requests~=2.32.3
 aiohttp~=3.11.6
 aiogram~=3.17.0
 python-dotenv~=1.0.1
-mimetypes-magic~=0.4.30
+pylibmagic~=0.5.0
+python-magic~=0.4.27

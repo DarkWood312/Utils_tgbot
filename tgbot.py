@@ -5,6 +5,7 @@ import os
 import re
 from pyexpat.errors import messages
 from typing import Callable
+import pylibmagic
 import magic
 import aiohttp
 from aiogram import Bot, Dispatcher, types, F
