@@ -28,6 +28,12 @@ class DB:
     def conn_kwargs(self):
         return dict(host=self.host, port=self.port, user=self.user, password=self.password, database=self.database)
 
+    async def get_user(self, user_id: int):
+        async with self as conn:
+            values = await conn.fetch('SELECT * from users WHERE user_id = $1', user_id)
+            values = values[0] if values else {}
+            return dict(values.items())
+
     async def get_user_settings(self, user_id: int) -> dict[str, Any]:
         async with self as conn:
             values = await conn.fetch('SELECT videoquality, audioformat, audiobitrate, filenamestyle, downloadmode, '
