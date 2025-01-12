@@ -5,7 +5,6 @@ import os
 import re
 from pyexpat.errors import messages
 from typing import Callable
-import pylibmagic
 import magic
 import aiohttp
 from aiogram import Bot, Dispatcher, types, F
@@ -67,6 +66,7 @@ async def download(url: str, api_key: str, callback_status: Callable = None, **k
                 downloaded_size += len(chunk)
                 if downloaded_size > 50 * 1024 * 1024:
                     async with session.post(shortener_api_url, headers={'X-Api-Key': dl_api_key}, json={'longUrl': file_url, 'findIfExists': True}) as shortener:
+                        logging.debug(await shortener.text())
                         short_url = (await shortener.json())['shortUrl']
 
                     return short_url
