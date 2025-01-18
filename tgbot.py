@@ -164,8 +164,8 @@ async def text(message: Message):
         await bot.send_chat_action(message.chat.id, ChatAction.UPLOAD_DOCUMENT)
         try:
             buffer = await download(body, dl_api_key, None, **settings)
-        except KeyError:
-            await message.answer('какая то ошибка...')
+        except Exception as e:
+            await message.answer(str(e))
         if isinstance(buffer, io.BytesIO):
             file_type = magic.from_buffer(buffer.read(2048), mime=True)
             buffer.seek(0)
