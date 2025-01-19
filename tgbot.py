@@ -1,21 +1,34 @@
 import asyncio
+import html
 import io
 import logging
 import re
-from typing import Callable
+from typing import Callable, Dict, Any, Awaitable
 import aiohttp
 from aiogram import Bot, Dispatcher, types, F
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode, ChatAction
 from aiogram.filters import CommandStart, Command
 from aiogram.fsm.storage.memory import MemoryStorage
-from aiogram.types import Message, InlineKeyboardButton, BufferedInputFile, CallbackQuery
+from aiogram.types import Message, InlineKeyboardButton, BufferedInputFile, CallbackQuery, Update
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from filetype import filetype
 
 from config import *
+
 dp = Dispatcher(storage=MemoryStorage())
 bot = Bot(os.getenv('TOKEN'), default=DefaultBotProperties(parse_mode=ParseMode.HTML))
+
+
+@dp.update.outer_middleware()
+async def LoggingMiddleware(
+        handler: Callable[[Update, Dict[str, Any]], Awaitable[Any]],
+        event: Update,
+        data: Dict[str, Any]) -> Any:
+    user = data['event_from_user']
+    if event.message and event.message.text:
+        logging.info(f"User {user.id} ({user.full_name}) sent a message: {event.message.text}")
+    return await handler(event, data)
 
 
 async def download(url: str, api_key: str, callback_status: Callable = None, **kwargs) -> io.BytesIO | str:
@@ -45,6 +58,7 @@ async def download(url: str, api_key: str, callback_status: Callable = None, **k
                                          'Authorization': f'Api-Key {api_key}'}
                 , json={'url': url, **kwargs}) as response:
             data = await response.json()
+            logging.info(msg=data)
             file_url = data['url']
             filename = data['filename']
             if callback_status:
@@ -61,9 +75,10 @@ async def download(url: str, api_key: str, callback_status: Callable = None, **k
                 buffer.write(chunk)
                 downloaded_size += len(chunk)
                 if downloaded_size > 50 * 1024 * 1024:
-                    async with session.post(shortener_api_url, headers={'X-Api-Key': dl_api_key}, json={'longUrl': file_url, 'findIfExists': True}) as shortener:
-                        logging.debug(await shortener.text())
-                        short_url = (await shortener.json())['shortUrl']
+                    async with session.post('https://spoo.me', headers={'Accept': 'application/json'},
+                                            data={'url': file_url}) as shortener:
+                        logging.info(await shortener.text())
+                        short_url = (await shortener.json())['short_url']
 
                     return short_url
                 chunk_count += 1
@@ -75,11 +90,14 @@ async def download(url: str, api_key: str, callback_status: Callable = None, **k
             await callback_status(1, downloaded_size)
         return buffer
 
+
 @dp.message(CommandStart())
 async def commandstart(message: Message):
     if not await sql.get_user(message.from_user.id):
         await sql.add_user(message.from_user.id)
-    await message.answer('Просто скинь мне ссылку на видео / аудио файл с ютуба, вк, одноклассников, рутюба, тиктока и др. и я попробую его скачать')
+    await message.answer(
+        'Просто скинь мне ссылку на видео / аудио файл с ютуба, вк, одноклассников, рутюба, тиктока и др. и я попробую его скачать')
+
 
 @dp.message(Command(commands='settings'))
 async def settings_cmd(message: Message):
@@ -90,6 +108,7 @@ async def settings_cmd(message: Message):
         v = str(v)
         markup.row(InlineKeyboardButton(text=k, callback_data=k), InlineKeyboardButton(text=v, callback_data=k))
     await message.answer('Настройки: ', reply_markup=markup.as_markup())
+
 
 @dp.callback_query()
 async def callback(call: CallbackQuery):
@@ -108,7 +127,6 @@ async def callback(call: CallbackQuery):
 
             case 'filenameStyle':
                 options_ = ['classic', 'pretty', 'basic', 'nerdy']
-
 
             case 'downloadMode':
                 options_ = ['auto', 'audio', 'mute']
@@ -137,7 +155,6 @@ async def callback(call: CallbackQuery):
             case _:
                 options_ = []
 
-
         for i in options_:
             markup.add(InlineKeyboardButton(text=i, callback_data=f'{call.data}_{i}'))
         await call.message.answer(f'{call.data}: ', reply_markup=markup.as_markup())
@@ -153,15 +170,18 @@ async def callback(call: CallbackQuery):
 
 @dp.message(F.text)
 async def text(message: Message):
+    buffer = None
     args = message.text.split(' ')
     body = args[0]
-    if re.match(r"""^[(http(s)?):\/\/(www\.)?a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,6}\b([-a-zA-Z0-9@:%_\+.~#?&\/\/=]*)$""", body, re.IGNORECASE):
+    if re.match(
+            r"""^[(http(s)?):\/\/(www\.)?a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,6}\b([-a-zA-Z0-9@:%_\+.~#?&\/\/=]*)$""",
+            body, re.IGNORECASE):
         settings = await sql.get_user_settings(message.from_user.id) or {}
         await bot.send_chat_action(message.chat.id, ChatAction.UPLOAD_DOCUMENT)
         try:
             buffer = await download(body, dl_api_key, None, **settings)
         except Exception as e:
-            await message.answer(str(e))
+            await message.answer(f'error {html.escape(type(e).__name__)} {html.escape(str(e))}')
         if isinstance(buffer, io.BytesIO):
             file_type = filetype.guess_mime(buffer.read(2048))
             buffer.seek(0)
@@ -178,7 +198,10 @@ async def text(message: Message):
         else:
             await message.answer(buffer)
 
+
 if __name__ == '__main__':
-    logging.basicConfig(level=logging.INFO)
+    logging.basicConfig(level=logging.INFO,
+                        format='%(asctime)s.%(msecs)03d %(levelname)s %(module)s - %(funcName)s: %(message)s',
+                        datefmt='%Y-%m-%d %H:%M:%S')
     logging.log(20, "Telegram bot has started!")
     asyncio.run(dp.start_polling(bot))
