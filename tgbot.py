@@ -1,11 +1,8 @@
 import asyncio
 import io
 import logging
-import os
 import re
-from pyexpat.errors import messages
 from typing import Callable
-import magic
 import aiohttp
 from aiogram import Bot, Dispatcher, types, F
 from aiogram.client.default import DefaultBotProperties
@@ -14,8 +11,7 @@ from aiogram.filters import CommandStart, Command
 from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.types import Message, InlineKeyboardButton, BufferedInputFile, CallbackQuery
 from aiogram.utils.keyboard import InlineKeyboardBuilder
-from dotenv import load_dotenv
-from requests import options
+from filetype import filetype
 
 from config import *
 dp = Dispatcher(storage=MemoryStorage())
@@ -167,7 +163,7 @@ async def text(message: Message):
         except Exception as e:
             await message.answer(str(e))
         if isinstance(buffer, io.BytesIO):
-            file_type = magic.from_buffer(buffer.read(2048), mime=True)
+            file_type = filetype.guess_mime(buffer.read(2048))
             buffer.seek(0)
             if len(args) > 0 and ('-d' in args[1:] or '--doc' in args[1:]):
                 await message.answer_document(BufferedInputFile(buffer.read(), buffer.name))
