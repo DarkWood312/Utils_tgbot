@@ -10,10 +10,12 @@ from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode, ChatAction
 from aiogram.filters import CommandStart, Command
 from aiogram.fsm.storage.memory import MemoryStorage
-from aiogram.types import Message, InlineKeyboardButton, BufferedInputFile, CallbackQuery, Update
+from aiogram.types import Message, InlineKeyboardButton, BufferedInputFile, CallbackQuery, Update, InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from filetype import filetype
 
+import constants
+import keyboards
 from config import *
 
 dp = Dispatcher(storage=MemoryStorage())
@@ -95,8 +97,9 @@ async def download(url: str, api_key: str, callback_status: Callable = None, **k
 async def commandstart(message: Message):
     if not await sql.get_user(message.from_user.id):
         await sql.add_user(message.from_user.id)
-    await message.answer(
-        'Просто скинь мне ссылку на видео / аудио файл с ютуба, вк, одноклассников, рутюба, тиктока и др. и я попробую его скачать')
+    # await message.answer(
+    #     'Просто скинь мне ссылку на видео / аудио файл с ютуба, вк, одноклассников, рутюба, тиктока и др. а я попробую его скачать')
+    await message.answer(constants.menu_text, reply_markup=await keyboards.menui())
 
 
 @dp.message(Command(commands='settings'))
@@ -164,7 +167,32 @@ async def callback(call: CallbackQuery):
             value = True if value == 'true' else False
 
         await sql.change_user_setting(call.from_user.id, setting, value)
-        await call.message.answer('Успешно!')
+        await call.answer('Успешно!')
+    elif call.data.startswith('menu_'):
+        setting, value = call.data.split('_', 1)
+        match value:
+            case 'menu':
+                await call.message.edit_text(constants.menu_text)
+                await call.message.edit_reply_markup(reply_markup=await keyboards.menui())
+            case 'downloader':
+                downloader_markup = InlineKeyboardBuilder()
+                downloader_markup.row(InlineKeyboardButton(text='Настройки: ', callback_data='downloader_settings'))
+                downloader_markup.row(InlineKeyboardButton(text='В меню', callback_data='menu_menu'))
+                await call.message.edit_text('<b>Название инструмента:</b> <i>Downloader</i>\n'
+                                             '<b>Описание:</b> <i>Просто скинь мне ссылку на видео / аудио файл с ютуба, вк, одноклассников, рутюба, тиктока и др. а я попробую его скачать</i>')
+                await call.message.edit_reply_markup(reply_markup=downloader_markup.as_markup())
+    elif call.data.startswith('downloader_'):
+        setting, value = call.data.split('_', 1)
+        match value:
+            case 'settings':
+                settings = await sql.get_user_settings(call.from_user.id)
+                markup = InlineKeyboardBuilder()
+                for k, v in settings.items():
+                    k = str(k)
+                    v = str(v)
+                    markup.row(InlineKeyboardButton(text=k, callback_data=k), InlineKeyboardButton(text=v, callback_data=k))
+                markup.row(InlineKeyboardButton(text='Назад', callback_data='menu_downloader'))
+                await call.message.edit_text('<b>Настройки: </b>', reply_markup=markup.as_markup())
     await call.answer()
 
 
