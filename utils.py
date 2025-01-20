@@ -26,7 +26,9 @@ async def shorten_url(long_url: str, session: aiohttp.ClientSession):
     return short_url
 
 
-def match_url(url: str):
+def match_url(url: str, with_protocol: bool = True):
+    if with_protocol:
+        return re.match(r"""^https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)$""", url, re.IGNORECASE)
     return re.match(
-        r"""^[(http(s)?):\/\/(www\.)?a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,6}\b([-a-zA-Z0-9@:%_\+.~#?&\/\/=]*)$""",
+        r"""^(https?:\/\/)?(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)$""",
         url, re.IGNORECASE)
