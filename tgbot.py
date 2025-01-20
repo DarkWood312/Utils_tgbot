@@ -8,18 +8,23 @@ import aiohttp
 from aiogram import Bot, Dispatcher, types, F
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode, ChatAction
-from aiogram.filters import CommandStart, Command
+from aiogram.filters import CommandStart, Command, CommandObject
+from aiogram.fsm.context import FSMContext
 from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.types import Message, InlineKeyboardButton, BufferedInputFile, CallbackQuery, Update, InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from filetype import filetype
 
-import constants
+from constants import bot, menu_text
 import keyboards
 from config import *
+from keyboards import canceli
+import utils
+from modules.handlers import register_handlers
+from modules.url_shortener import UrlShortener
 
 dp = Dispatcher(storage=MemoryStorage())
-bot = Bot(os.getenv('TOKEN'), default=DefaultBotProperties(parse_mode=ParseMode.HTML))
+register_handlers(dp)
 
 
 @dp.update.outer_middleware()
@@ -77,12 +82,7 @@ async def download(url: str, api_key: str, callback_status: Callable = None, **k
                 buffer.write(chunk)
                 downloaded_size += len(chunk)
                 if downloaded_size > 50 * 1024 * 1024:
-                    async with session.post('https://spoo.me', headers={'Accept': 'application/json'},
-                                            data={'url': file_url}) as shortener:
-                        logging.info(await shortener.text())
-                        short_url = (await shortener.json())['short_url']
-
-                    return short_url
+                    return await utils.shorten_url(file_url, session)
                 chunk_count += 1
 
                 if callback_status:
@@ -94,27 +94,54 @@ async def download(url: str, api_key: str, callback_status: Callable = None, **k
 
 
 @dp.message(CommandStart())
-async def commandstart(message: Message):
+async def commandstart(message: Message, state: FSMContext):
+    await utils.state_clear(message.chat.id, state)
     if not await sql.get_user(message.from_user.id):
         await sql.add_user(message.from_user.id)
     # await message.answer(
     #     'Просто скинь мне ссылку на видео / аудио файл с ютуба, вк, одноклассников, рутюба, тиктока и др. а я попробую его скачать')
-    await message.answer(constants.menu_text, reply_markup=await keyboards.menui())
+    await message.answer(menu_text, reply_markup=await keyboards.menui())
 
 
-@dp.message(Command(commands='settings'))
-async def settings_cmd(message: Message):
-    settings = await sql.get_user_settings(message.from_user.id)
-    markup = InlineKeyboardBuilder()
-    for k, v in settings.items():
-        k = str(k)
-        v = str(v)
-        markup.row(InlineKeyboardButton(text=k, callback_data=k), InlineKeyboardButton(text=v, callback_data=k))
-    await message.answer('Настройки: ', reply_markup=markup.as_markup())
+# @dp.message(Command(commands='settings'))
+# async def settings_cmd(message: Message):
+#     settings = await sql.get_user_settings(message.from_user.id)
+#     markup = InlineKeyboardBuilder()
+#     for k, v in settings.items():
+#         k = str(k)
+#         v = str(v)
+#         markup.row(InlineKeyboardButton(text=k, callback_data=k), InlineKeyboardButton(text=v, callback_data=k))
+#     await message.answer('Настройки: ', reply_markup=markup.as_markup())
+
+@dp.message(Command(commands=['short_url', 'su', 'url']))
+async def short_url_cmd(message: Message, command: CommandObject):
+    if not command.args:
+        await message.answer(f'<b>Использование: </b><code>/{command.command} {html.escape("<ссылка для сокращения>")}</code>')
+        return
+    args = command.args.split(' ')
+    long_url = args[0]
+    if not utils.match_url(long_url):
+        await message.answer('<b>Некорректная ссылка!</b>')
+        return
+
+    async with aiohttp.ClientSession() as session:
+        short_url = await utils.shorten_url(long_url, session)
+
+    await message.answer(short_url)
+
+@dp.message(Command(commands='get_state'))
+async def get_state_cmd(message: Message, state: FSMContext):
+    await message.answer(f'state: {await state.get_state() or None}\n'
+                         f'state_data {await state.get_data() or None}')
+
+
+@dp.callback_query(F.call.data == 'cancel')
+async def cancel_callback(call: CallbackQuery, state: FSMContext):
+    await utils.state_clear(call.message.chat.id, state)
 
 
 @dp.callback_query()
-async def callback(call: CallbackQuery):
+async def callback(call: CallbackQuery, state: FSMContext):
     settings = await sql.get_user_settings(call.from_user.id)
     if call.data in settings:
         markup = InlineKeyboardBuilder()
@@ -159,30 +186,38 @@ async def callback(call: CallbackQuery):
                 options_ = []
 
         for i in options_:
-            markup.add(InlineKeyboardButton(text=i, callback_data=f'{call.data}_{i}'))
+            markup.add(InlineKeyboardButton(text=i, callback_data=f'{call.data}:{i}'))
         await call.message.answer(f'{call.data}: ', reply_markup=markup.as_markup())
-    elif any(call.data.startswith(f'{setting}_') for setting in settings):
-        setting, value = call.data.split('_', 1)
+    elif any(call.data.startswith(f'{setting}:') for setting in settings):
+        setting, value = call.data.split(':', 1)
         if value in ('true', 'false'):
             value = True if value == 'true' else False
 
         await sql.change_user_setting(call.from_user.id, setting, value)
         await call.answer('Успешно!')
-    elif call.data.startswith('menu_'):
-        setting, value = call.data.split('_', 1)
+    elif call.data.startswith('menu:'):
+        setting, value = call.data.split(':', 1)
         match value:
             case 'menu':
-                await call.message.edit_text(constants.menu_text)
+                await call.message.edit_text(menu_text)
                 await call.message.edit_reply_markup(reply_markup=await keyboards.menui())
             case 'downloader':
                 downloader_markup = InlineKeyboardBuilder()
-                downloader_markup.row(InlineKeyboardButton(text='Настройки: ', callback_data='downloader_settings'))
-                downloader_markup.row(InlineKeyboardButton(text='В меню', callback_data='menu_menu'))
+                downloader_markup.row(InlineKeyboardButton(text='Настройки: ', callback_data='downloader:settings'))
+                downloader_markup.row(InlineKeyboardButton(text='В меню', callback_data='menu:menu'))
                 await call.message.edit_text('<b>Название инструмента:</b> <i>Downloader</i>\n'
                                              '<b>Описание:</b> <i>Просто скинь мне ссылку на видео / аудио файл с ютуба, вк, одноклассников, рутюба, тиктока и др. а я попробую его скачать</i>')
                 await call.message.edit_reply_markup(reply_markup=downloader_markup.as_markup())
-    elif call.data.startswith('downloader_'):
-        setting, value = call.data.split('_', 1)
+
+            case 'url_shortener':
+                msg = await call.message.edit_text('<b>Введите ссылку, которую нужно сократить: </b>',
+                                                   reply_markup=await canceli())
+                await state.set_state(UrlShortener.url_prompt)
+                await state.update_data({'edit': msg})
+
+
+    elif call.data.startswith('downloader:'):
+        setting, value = call.data.split(':', 1)
         match value:
             case 'settings':
                 settings = await sql.get_user_settings(call.from_user.id)
@@ -190,9 +225,11 @@ async def callback(call: CallbackQuery):
                 for k, v in settings.items():
                     k = str(k)
                     v = str(v)
-                    markup.row(InlineKeyboardButton(text=k, callback_data=k), InlineKeyboardButton(text=v, callback_data=k))
-                markup.row(InlineKeyboardButton(text='Назад', callback_data='menu_downloader'))
+                    markup.row(InlineKeyboardButton(text=k, callback_data=k),
+                               InlineKeyboardButton(text=v, callback_data=k))
+                markup.row(InlineKeyboardButton(text='Назад', callback_data='menu:downloader'))
                 await call.message.edit_text('<b>Настройки: </b>', reply_markup=markup.as_markup())
+
     await call.answer()
 
 
@@ -201,9 +238,7 @@ async def text(message: Message):
     buffer = None
     args = message.text.split(' ')
     body = args[0]
-    if re.match(
-            r"""^[(http(s)?):\/\/(www\.)?a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,6}\b([-a-zA-Z0-9@:%_\+.~#?&\/\/=]*)$""",
-            body, re.IGNORECASE):
+    if utils.match_url(body):
         settings = await sql.get_user_settings(message.from_user.id) or {}
         await bot.send_chat_action(message.chat.id, ChatAction.UPLOAD_DOCUMENT)
         try:
@@ -231,5 +266,5 @@ if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO,
                         format='%(asctime)s.%(msecs)03d %(levelname)s %(module)s - %(funcName)s: %(message)s',
                         datefmt='%Y-%m-%d %H:%M:%S')
-    logging.log(20, "Telegram bot has started!")
     asyncio.run(dp.start_polling(bot))
+    logging.log(20, "Telegram bot has started!")
