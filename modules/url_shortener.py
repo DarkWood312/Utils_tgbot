@@ -20,7 +20,7 @@ async def url_input(message: Message, state: FSMContext):
     data = await state.get_data()
     await message.delete()
     if not utils.match_url(message.text):
-        msg = await message.answer('<b>Некорректная ссылка!</b>', reply_markup=await keyboards.canceli())
+        msg = await message.answer('<b>Некорректная ссылка!</b>', reply_markup=await keyboards.to_menui())
         await state.update_data({'delete': [msg.message_id] if 'delete' not in data else [*data['delete'], msg.message_id]})
         return
     async with aiohttp.ClientSession() as session:

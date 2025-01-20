@@ -10,21 +10,21 @@ from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode, ChatAction
 from aiogram.filters import CommandStart, Command, CommandObject
 from aiogram.fsm.context import FSMContext
+from aiogram.fsm.state import State
 from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.types import Message, InlineKeyboardButton, BufferedInputFile, CallbackQuery, Update, InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from filetype import filetype
 
 from constants import bot, menu_text
-import keyboards
+import keyboards as kb
 from config import *
-from keyboards import canceli
+from filters import AnyStateFilter
 import utils
 from modules.handlers import register_handlers
 from modules.url_shortener import UrlShortener
 
 dp = Dispatcher(storage=MemoryStorage())
-register_handlers(dp)
 
 
 @dp.update.outer_middleware()
@@ -100,7 +100,7 @@ async def commandstart(message: Message, state: FSMContext):
         await sql.add_user(message.from_user.id)
     # await message.answer(
     #     'Просто скинь мне ссылку на видео / аудио файл с ютуба, вк, одноклассников, рутюба, тиктока и др. а я попробую его скачать')
-    await message.answer(menu_text, reply_markup=await keyboards.menui())
+    await message.answer(menu_text, reply_markup=await kb.menui())
 
 
 # @dp.message(Command(commands='settings'))
@@ -116,7 +116,8 @@ async def commandstart(message: Message, state: FSMContext):
 @dp.message(Command(commands=['short_url', 'su', 'url']))
 async def short_url_cmd(message: Message, command: CommandObject):
     if not command.args:
-        await message.answer(f'<b>Использование: </b><code>/{command.command} {html.escape("<ссылка для сокращения>")}</code>')
+        await message.answer(
+            f'<b>Использование: </b><code>/{command.command} {html.escape("<ссылка для сокращения>")}</code>')
         return
     args = command.args.split(' ')
     long_url = args[0]
@@ -129,15 +130,25 @@ async def short_url_cmd(message: Message, command: CommandObject):
 
     await message.answer(short_url)
 
+
 @dp.message(Command(commands='get_state'))
 async def get_state_cmd(message: Message, state: FSMContext):
     await message.answer(f'state: {await state.get_state() or None}\n'
                          f'state_data {await state.get_data() or None}')
 
 
-@dp.callback_query(F.call.data == 'cancel')
+@dp.callback_query(F.data == 'cancel')
 async def cancel_callback(call: CallbackQuery, state: FSMContext):
+    data = await state.get_data()
     await utils.state_clear(call.message.chat.id, state)
+    if 'edit' in data and 'to_kwargs' in data:
+        await data['edit'].edit_text(**data['to_kwargs'])
+    else:
+        await call.message.edit_text(menu_text, reply_markup=await kb.menui())
+    await call.answer()
+
+
+register_handlers(dp)
 
 
 @dp.callback_query()
@@ -200,18 +211,18 @@ async def callback(call: CallbackQuery, state: FSMContext):
         match value:
             case 'menu':
                 await call.message.edit_text(menu_text)
-                await call.message.edit_reply_markup(reply_markup=await keyboards.menui())
+                await call.message.edit_reply_markup(reply_markup=await kb.menui())
             case 'downloader':
                 downloader_markup = InlineKeyboardBuilder()
                 downloader_markup.row(InlineKeyboardButton(text='Настройки: ', callback_data='downloader:settings'))
-                downloader_markup.row(InlineKeyboardButton(text='В меню', callback_data='menu:menu'))
+                downloader_markup.row(await kb.to_menui(True))
                 await call.message.edit_text('<b>Название инструмента:</b> <i>Downloader</i>\n'
                                              '<b>Описание:</b> <i>Просто скинь мне ссылку на видео / аудио файл с ютуба, вк, одноклассников, рутюба, тиктока и др. а я попробую его скачать</i>')
                 await call.message.edit_reply_markup(reply_markup=downloader_markup.as_markup())
 
             case 'url_shortener':
                 msg = await call.message.edit_text('<b>Введите ссылку, которую нужно сократить: </b>',
-                                                   reply_markup=await canceli())
+                                                   reply_markup=await kb.to_menui())
                 await state.set_state(UrlShortener.url_prompt)
                 await state.update_data({'edit': msg})
 

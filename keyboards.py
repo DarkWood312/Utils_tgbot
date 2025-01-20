@@ -10,8 +10,20 @@ async def menui() -> InlineKeyboardMarkup:
     return markup.as_markup()
 
 
-async def canceli() -> InlineKeyboardMarkup:
+async def canceli(button: bool = False) -> InlineKeyboardMarkup | InlineKeyboardButton:
     markup = InlineKeyboardBuilder()
-    markup.row(InlineKeyboardButton(text='Отмена', callback_data='cancel'))
+    b = InlineKeyboardButton(text='Отмена', callback_data='cancel')
+    if button:
+        return b
+    markup.row(b)
+    return markup.as_markup()
+
+
+async def to_menui(button: bool = False) -> InlineKeyboardMarkup | InlineKeyboardButton:
+    markup = InlineKeyboardBuilder()
+    b = InlineKeyboardButton(text='В меню', callback_data='menu:menu')
+    if button:
+        return b
+    markup.row(b)
 
     return markup.as_markup()
