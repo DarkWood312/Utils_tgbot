@@ -12,7 +12,8 @@ from aiogram.filters import CommandStart, Command, CommandObject
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State
 from aiogram.fsm.storage.memory import MemoryStorage
-from aiogram.types import Message, InlineKeyboardButton, BufferedInputFile, CallbackQuery, Update, InlineKeyboardMarkup
+from aiogram.types import Message, InlineKeyboardButton, BufferedInputFile, CallbackQuery, Update, InlineKeyboardMarkup, \
+    InlineQuery, InlineQueryResult, InlineQueryResultArticle, InputMessageContent, InputTextMessageContent
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from filetype import filetype
 
@@ -21,76 +22,16 @@ import keyboards as kb
 from config import *
 from filters import AnyStateFilter
 import utils
+from inline_queries import register_queries
+from middlewares import register_middlewares
 from modules.handlers import register_handlers
 from modules.url_shortener import UrlShortener
+from utils import match_url
 
 dp = Dispatcher(storage=MemoryStorage())
 
-
-@dp.update.outer_middleware()
-async def LoggingMiddleware(
-        handler: Callable[[Update, Dict[str, Any]], Awaitable[Any]],
-        event: Update,
-        data: Dict[str, Any]) -> Any:
-    user = data['event_from_user']
-    if event.message and event.message.text:
-        logging.info(f"User {user.id} ({user.full_name}) sent a message: {event.message.text}")
-    return await handler(event, data)
-
-
-async def download(url: str, api_key: str, callback_status: Callable = None, **kwargs) -> io.BytesIO | str:
-    """
-
-    :param url:
-    :param api_key:
-    :param callback_status:
-
-
-    videoQuality: 144, 360, 720, 1080, 1440, 2160, 4320, 'max' -> 1080 \n
-    audioFormat: 'best', 'mp3', 'opus', 'ogg', 'wav' -> mp3 \n
-    audioBitrate: 320, 256, 128, 96, 64, 8 -> 128\n
-    filenameStyle: 'classic', 'pretty', 'basic', 'nerdy' -> classic\n
-    downloadMode: 'auto', 'audio', 'mute' -> auto\n
-    youtubeVideoCodec: 'h264', 'av1', 'vp9' -> h264\n
-    youtubeDubLang: 'ru', 'en' ... -> ru\n
-    tiktokFullAudio: -> false\n
-    tiktokH265: -> false\n
-    twitterGif: -> false\n
-    youtubeHLS: -> false\n
-    :return: buffer
-    """
-    async with aiohttp.ClientSession() as session:
-        async with session.post('https://dl.dwip.pro',
-                                headers={'Accept': 'application/json', 'Content-Type': 'application/json',
-                                         'Authorization': f'Api-Key {api_key}'}
-                , json={'url': url, **kwargs}) as response:
-            data = await response.json()
-            logging.info(msg=data)
-            file_url = data['url']
-            filename = data['filename']
-            if callback_status:
-                await callback_status(2, 0)
-        async with session.get(file_url) as response:
-            # total_size = int(response.headers.get('content-length', 0))
-            downloaded_size = 0
-            chunk_count = 0
-            chunk_size = 8192  # Adjust chunk size as needed
-            buffer = io.BytesIO()
-            buffer.name = filename
-
-            async for chunk in response.content.iter_chunked(chunk_size):  # Use iter_any for streaming
-                buffer.write(chunk)
-                downloaded_size += len(chunk)
-                if downloaded_size > 50 * 1024 * 1024:
-                    return await utils.shorten_url(file_url, session)
-                chunk_count += 1
-
-                if callback_status:
-                    await callback_status(0, downloaded_size)
-        buffer.seek(0)
-        if callback_status:
-            await callback_status(1, downloaded_size)
-        return buffer
+register_middlewares(dp)
+register_queries(dp)
 
 
 @dp.message(CommandStart())
@@ -253,7 +194,7 @@ async def text(message: Message):
         settings = await sql.get_user_settings(message.from_user.id) or {}
         await bot.send_chat_action(message.chat.id, ChatAction.UPLOAD_DOCUMENT)
         try:
-            buffer = await download(body, dl_api_key, None, **settings)
+            buffer = await utils.download(body, dl_api_key, None, **settings)
         except Exception as e:
             await message.answer(f'error {html.escape(type(e).__name__)} {html.escape(str(e))}')
         if isinstance(buffer, io.BytesIO):
