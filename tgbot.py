@@ -2,16 +2,11 @@ import asyncio
 import html
 import io
 import logging
-import re
-from socket import errorTab
-from typing import Callable, Dict, Any, Awaitable
 import aiohttp
 from aiogram import Bot, Dispatcher, types, F
-from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode, ChatAction
 from aiogram.filters import CommandStart, Command, CommandObject
 from aiogram.fsm.context import FSMContext
-from aiogram.fsm.state import State
 from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.types import Message, InlineKeyboardButton, BufferedInputFile, CallbackQuery, Update, InlineKeyboardMarkup, \
     InlineQuery, InlineQueryResult, InlineQueryResultArticle, InputMessageContent, InputTextMessageContent
@@ -21,7 +16,6 @@ from filetype import filetype
 from constants import bot, menu_text
 import keyboards as kb
 from config import *
-from filters import AnyStateFilter
 import utils
 from inline_queries import register_queries
 from middlewares import register_middlewares
