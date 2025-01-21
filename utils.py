@@ -73,7 +73,6 @@ async def download(url: str, api_key: str, callback_status: Callable = None, **k
             logging.info(msg=data)
 
             if data['status'] == 'error':
-                print(1)
                 raise DownloadError(data['error']['code'])
 
             file_url = data['url']

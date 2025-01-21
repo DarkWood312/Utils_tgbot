@@ -196,6 +196,21 @@ async def text(message: Message):
         await bot.send_chat_action(message.chat.id, ChatAction.UPLOAD_DOCUMENT)
         try:
             buffer = await utils.download(body, dl_api_key, None, **settings)
+            if isinstance(buffer, io.BytesIO):
+                file_type = filetype.guess_mime(buffer.read(2048))
+                buffer.seek(0)
+                if len(args) > 0 and ('-d' in args[1:] or '--doc' in args[1:]):
+                    await message.answer_document(BufferedInputFile(buffer.read(), buffer.name))
+                    return
+                match file_type.split('/', 1)[0]:
+                    case 'video':
+                        await message.answer_video(BufferedInputFile(buffer.read(), buffer.name))
+                    case 'audio':
+                        await message.answer_audio(BufferedInputFile(buffer.read(), buffer.name))
+                    case _:
+                        await message.answer_document(BufferedInputFile(buffer.read(), buffer.name))
+            else:
+                await message.answer(buffer)
         except utils.DownloadError as e:
             if str(e) == 'error.api.content.video.unavailable':
                 await message.answer(f'Видео недоступно :(. Скорее всего оно имеет возрастное ограничение')
@@ -203,22 +218,6 @@ async def text(message: Message):
         except Exception as e:
             await message.answer(f'error {html.escape(type(e).__name__)} {html.escape(str(e))}')
             return
-        if isinstance(buffer, io.BytesIO):
-            file_type = filetype.guess_mime(buffer.read(2048))
-            buffer.seek(0)
-            if len(args) > 0 and ('-d' in args[1:] or '--doc' in args[1:]):
-                await message.answer_document(BufferedInputFile(buffer.read(), buffer.name))
-                return
-            match file_type.split('/', 1)[0]:
-                case 'video':
-                    await message.answer_video(BufferedInputFile(buffer.read(), buffer.name))
-                case 'audio':
-                    await message.answer_audio(BufferedInputFile(buffer.read(), buffer.name))
-                case _:
-                    await message.answer_document(BufferedInputFile(buffer.read(), buffer.name))
-        else:
-            await message.answer(buffer)
-
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO,
