@@ -10,6 +10,12 @@ from aiogram.fsm.context import FSMContext
 from constants import bot
 
 
+class DownloadError(Exception):
+    def __init__(self, message: str):
+        self.message = message
+        super().__init__(self.message)
+
+
 async def state_clear(chat_id: int, state: FSMContext, delete_messages: bool = True):
     data = await state.get_data()
     await state.clear()
@@ -65,6 +71,11 @@ async def download(url: str, api_key: str, callback_status: Callable = None, **k
                 , json={'url': url, **kwargs}) as response:
             data = await response.json()
             logging.info(msg=data)
+
+            if data['status'] == 'error':
+                print(1)
+                raise DownloadError(data['error']['code'])
+
             file_url = data['url']
             filename = data['filename']
             if callback_status:

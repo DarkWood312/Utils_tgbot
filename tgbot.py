@@ -3,6 +3,7 @@ import html
 import io
 import logging
 import re
+from socket import errorTab
 from typing import Callable, Dict, Any, Awaitable
 import aiohttp
 from aiogram import Bot, Dispatcher, types, F
@@ -195,8 +196,13 @@ async def text(message: Message):
         await bot.send_chat_action(message.chat.id, ChatAction.UPLOAD_DOCUMENT)
         try:
             buffer = await utils.download(body, dl_api_key, None, **settings)
+        except utils.DownloadError as e:
+            if str(e) == 'error.api.content.video.unavailable':
+                await message.answer(f'Видео недоступно :(. Скорее всего оно имеет возрастное ограничение')
+            return
         except Exception as e:
             await message.answer(f'error {html.escape(type(e).__name__)} {html.escape(str(e))}')
+            return
         if isinstance(buffer, io.BytesIO):
             file_type = filetype.guess_mime(buffer.read(2048))
             buffer.seek(0)
