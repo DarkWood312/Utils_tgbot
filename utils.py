@@ -17,6 +17,8 @@ class DownloadError(Exception):
 
 
 async def state_clear(chat_id: int, state: FSMContext, delete_messages: bool = True):
+    if state is None:
+        return
     data = await state.get_data()
     await state.clear()
 

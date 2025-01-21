@@ -7,8 +7,8 @@ import config
 async def menui() -> InlineKeyboardMarkup:
     markup = InlineKeyboardBuilder()
     if config.dl_api_key:
-        markup.row(InlineKeyboardButton(text='Downloader', callback_data='menu:downloader'))
-    markup.row(InlineKeyboardButton(text='URL shortener', callback_data='menu:url_shortener'))
+        markup.row(InlineKeyboardButton(text='Загрузчик', callback_data='menu:downloader'))
+    markup.row(InlineKeyboardButton(text='Сокращатель ссылок', callback_data='menu:url_shortener'))
 
     return markup.as_markup()
 

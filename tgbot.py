@@ -152,12 +152,13 @@ async def callback(call: CallbackQuery, state: FSMContext):
                 downloader_markup = InlineKeyboardBuilder()
                 downloader_markup.row(InlineKeyboardButton(text='Настройки: ', callback_data='downloader:settings'))
                 downloader_markup.row(await kb.to_menui(True))
-                await call.message.edit_text('<b>Название инструмента:</b> <i>Downloader</i>\n'
-                                             '<b>Описание:</b> <i>Просто скинь мне ссылку на видео / аудио файл с ютуба, вк, одноклассников, рутюба, тиктока и др. а я попробую его скачать</i>')
+                await call.message.edit_text('<b>Название инструмента:</b> <i>Загрузчик</i>\n'
+                                             '<b>Описание:</b> <i>Просто скиньте мне ссылку на видео / аудио файл с ютуба, вк, одноклассников, рутюба, тиктока и др. а я попробую его скачать</i>')
                 await call.message.edit_reply_markup(reply_markup=downloader_markup.as_markup())
 
             case 'url_shortener':
-                msg = await call.message.edit_text('<b>Введите ссылку, которую нужно сократить: </b>',
+                msg = await call.message.edit_text('<b>Название инструмента:</b> <i>Сокращатель ссылок</i>\n'
+                                                   '<b>Описание:</b> <i>Отправьте ссылку, которую нужно сократить. </i>',
                                                    reply_markup=await kb.to_menui())
                 await state.set_state(UrlShortener.url_prompt)
                 await state.update_data({'edit': msg})
