@@ -13,6 +13,7 @@ from aiogram.types import Message, InlineKeyboardButton, BufferedInputFile, Call
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from filetype import filetype
 
+import config
 from constants import bot, menu_text
 import keyboards as kb
 from config import *
@@ -219,5 +220,8 @@ if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO,
                         format='%(asctime)s.%(msecs)03d %(levelname)s %(module)s - %(funcName)s: %(message)s',
                         datefmt='%Y-%m-%d %H:%M:%S')
-    asyncio.run(dp.start_polling(bot))
+    print(bot.session.api)
+    if bot.session.api.is_local:
+        logging.info(f'Using {config.tg_api_server_session} telegram api url (local). Limits are increased.')
     logging.log(20, "Telegram bot has started!")
+    asyncio.run(dp.start_polling(bot))
