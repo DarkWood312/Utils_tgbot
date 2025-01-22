@@ -1,9 +1,9 @@
+import html
 import io
 import logging
 import re
 from typing import *
 import aiohttp
-from aiogram import Bot
 
 from aiogram.fsm.context import FSMContext
 
@@ -16,13 +16,13 @@ class DownloadError(Exception):
         super().__init__(self.message)
 
 
-async def state_clear(chat_id: int, state: FSMContext, delete_messages: bool = True):
+async def state_clear(state: FSMContext, delete_messages: bool = True, chat_id: int = None):
     if state is None:
         return
     data = await state.get_data()
     await state.clear()
 
-    if 'delete' in data:
+    if 'delete' in data and delete_messages and chat_id:
         await bot.delete_messages(chat_id, data['delete'])
 
 
@@ -102,3 +102,8 @@ async def download(url: str, api_key: str, callback_status: Callable = None, **k
         if callback_status:
             await callback_status(1, downloaded_size)
         return buffer
+
+def get_tool_description(name: str, desc: str, extra: str = ''):
+    return (f'<b>Название инструмента:</b> <i>{html.escape(name)}</i>\n'
+            f'<b>Описание:</b> <i>{html.escape(desc)}</i>'
+            f'{extra}')

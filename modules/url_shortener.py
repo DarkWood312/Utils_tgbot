@@ -26,4 +26,4 @@ async def url_input(message: Message, state: FSMContext):
     async with aiohttp.ClientSession() as session:
         short_url = await utils.shorten_url(message.text, session)
         await data['edit'].edit_text(f'{html.escape(message.text)} <b>--></b> {short_url}')
-        await utils.state_clear(message.chat.id, state)
+        await utils.state_clear(state, chat_id=message.chat.id)

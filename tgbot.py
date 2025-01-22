@@ -31,7 +31,7 @@ register_queries(dp)
 
 @dp.message(CommandStart())
 async def commandstart(message: Message, state: FSMContext):
-    await utils.state_clear(message.chat.id, state)
+    await utils.state_clear(state, chat_id=message.chat.id)
     if not await sql.get_user(message.from_user.id):
         await sql.add_user(message.from_user.id)
     # await message.answer(
@@ -69,14 +69,14 @@ async def short_url_cmd(message: Message, command: CommandObject):
 
 @dp.message(Command(commands='get_state'))
 async def get_state_cmd(message: Message, state: FSMContext):
-    await message.answer(f'state: {await state.get_state() or None}\n'
-                         f'state_data {await state.get_data() or None}')
+    await message.answer(f'state: {await state.get_state() or None}\n')
+                         # f'state_data {await state.get_data() or None}')
 
 
 @dp.callback_query(F.data == 'cancel')
 async def cancel_callback(call: CallbackQuery, state: FSMContext):
     data = await state.get_data()
-    await utils.state_clear(call.message.chat.id, state)
+    await utils.state_clear(state, chat_id=call.message.chat.id)
     if 'edit' in data and 'to_kwargs' in data:
         await data['edit'].edit_text(**data['to_kwargs'])
     else:
@@ -146,22 +146,23 @@ async def callback(call: CallbackQuery, state: FSMContext):
         setting, value = call.data.split(':', 1)
         match value:
             case 'menu':
+                await utils.state_clear(state, chat_id=call.message.chat.id)
                 await call.message.edit_text(menu_text)
                 await call.message.edit_reply_markup(reply_markup=await kb.menui())
             case 'downloader':
                 downloader_markup = InlineKeyboardBuilder()
                 downloader_markup.row(InlineKeyboardButton(text='Настройки: ', callback_data='downloader:settings'))
                 downloader_markup.row(await kb.to_menui(True))
-                await call.message.edit_text('<b>Название инструмента:</b> <i>Загрузчик</i>\n'
-                                             '<b>Описание:</b> <i>Просто скиньте мне ссылку на видео / аудио файл с ютуба, вк, одноклассников, рутюба, тиктока и др. а я попробую его скачать</i>')
-                await call.message.edit_reply_markup(reply_markup=downloader_markup.as_markup())
+                await call.message.edit_text(utils.get_tool_description('Загрузчик', 'Скиньте мне ссылку на видео / аудио файл с ютуба, вк, одноклассников, рутюба, тиктока и др. а я попробую его скачать'), reply_markup=downloader_markup.as_markup())
 
             case 'url_shortener':
-                msg = await call.message.edit_text('<b>Название инструмента:</b> <i>Сокращатель ссылок</i>\n'
-                                                   '<b>Описание:</b> <i>Отправьте ссылку, которую нужно сократить. </i>',
+                msg = await call.message.edit_text(utils.get_tool_description('Сокращатель ссылок', 'Отправьте ссылку, которую нужно сократить'),
                                                    reply_markup=await kb.to_menui())
                 await state.set_state(UrlShortener.url_prompt)
                 await state.update_data({'edit': msg})
+
+            case 'get_file_direct_url':
+                await call.message.edit_text(utils.get_tool_description('Прямая ссылка на файл', 'Отправьте файл (<50 МБ) для получения прямой ссылки на него.'), reply_markup=await kb.to_menui())
 
 
     elif call.data.startswith('downloader:'):
