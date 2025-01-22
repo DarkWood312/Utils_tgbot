@@ -8,12 +8,15 @@ from aiogram.enums import ParseMode, ChatAction
 from aiogram.filters import CommandStart, Command, CommandObject
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.storage.memory import MemoryStorage
+from aiogram.methods import DeleteWebhook
 from aiogram.types import Message, InlineKeyboardButton, BufferedInputFile, CallbackQuery, Update, InlineKeyboardMarkup, \
-    InlineQuery, InlineQueryResult, InlineQueryResultArticle, InputMessageContent, InputTextMessageContent
+    InlineQuery, InlineQueryResult, InlineQueryResultArticle, InputMessageContent, InputTextMessageContent, \
+    InputMediaDocument, InputMediaVideo, InputMediaAudio
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from filetype import filetype
 
 import config
+import constants
 from constants import bot, menu_text
 import keyboards as kb
 from config import *
@@ -22,7 +25,7 @@ from inline_queries import register_queries
 from middlewares import register_middlewares
 from modules.handlers import register_handlers
 from modules.url_shortener import UrlShortener
-from utils import match_url
+from utils import match_url, format_file_description
 
 dp = Dispatcher(storage=MemoryStorage())
 
@@ -71,7 +74,7 @@ async def short_url_cmd(message: Message, command: CommandObject):
 @dp.message(Command(commands='get_state'))
 async def get_state_cmd(message: Message, state: FSMContext):
     await message.answer(f'state: {await state.get_state() or None}\n')
-                         # f'state_data {await state.get_data() or None}')
+    # f'state_data {await state.get_data() or None}')
 
 
 @dp.callback_query(F.data == 'cancel')
@@ -154,16 +157,21 @@ async def callback(call: CallbackQuery, state: FSMContext):
                 downloader_markup = InlineKeyboardBuilder()
                 downloader_markup.row(InlineKeyboardButton(text='Настройки: ', callback_data='downloader:settings'))
                 downloader_markup.row(await kb.to_menui(True))
-                await call.message.edit_text(utils.get_tool_description('Загрузчик', 'Скиньте мне ссылку на видео / аудио файл с ютуба, вк, одноклассников, рутюба, тиктока и др. а я попробую его скачать'), reply_markup=downloader_markup.as_markup())
+                await call.message.edit_text(utils.format_tool_description('Загрузчик',
+                                                                           'Скиньте мне ссылку на видео / аудио файл с ютуба, вк, одноклассников, рутюба, тиктока и др. а я попробую его скачать'),
+                                             reply_markup=downloader_markup.as_markup())
 
             case 'url_shortener':
-                msg = await call.message.edit_text(utils.get_tool_description('Сокращатель ссылок', 'Отправьте ссылку, которую нужно сократить'),
-                                                   reply_markup=await kb.to_menui())
+                msg = await call.message.edit_text(
+                    utils.format_tool_description('Сокращатель ссылок', 'Отправьте ссылку, которую нужно сократить'),
+                    reply_markup=await kb.to_menui())
                 await state.set_state(UrlShortener.url_prompt)
                 await state.update_data({'edit': msg})
 
             case 'get_file_direct_url':
-                await call.message.edit_text(utils.get_tool_description('Прямая ссылка на файл', 'Отправьте файл (<50 МБ) для получения прямой ссылки на него.'), reply_markup=await kb.to_menui())
+                await call.message.edit_text(utils.format_tool_description('Прямая ссылка на файл',
+                                                                           f'Отправьте файл (<{1000 if constants.max_file_size_download == -1 else constants.max_file_size_download} МБ) для получения прямой ссылки на него.'),
+                                             reply_markup=await kb.to_menui())
 
 
     elif call.data.startswith('downloader:'):
@@ -192,22 +200,30 @@ async def text(message: Message):
         settings = await sql.get_user_settings(message.from_user.id) or {}
         await bot.send_chat_action(message.chat.id, ChatAction.UPLOAD_DOCUMENT)
         try:
+            msg = await message.answer('<b>Скачивание...</b>')
             buffer = await utils.download(body, dl_api_key, None, **settings)
             if isinstance(buffer, io.BytesIO):
                 file_type = filetype.guess_mime(buffer.read(2048))
+                msg = await msg.edit_text(f'<b>Файл скачан! Отправка...</b>\n<b>Тип файла: </b> {file_type}')
+                buffer.seek(0, 2)
+                file_size = buffer.tell()
                 buffer.seek(0)
+                buffer_val = buffer.read()
+                file_typec = file_type
+                caption = format_file_description(file_type, file_size / 1024 / 1024, 'МБ')
                 if len(args) > 0 and ('-d' in args[1:] or '--doc' in args[1:]):
-                    await message.answer_document(BufferedInputFile(buffer.read(), buffer.name))
-                    return
-                match file_type.split('/', 1)[0]:
+                    file_typec = 'doc/doc'
+                match file_typec.split('/', 1)[0]:
                     case 'video':
-                        await message.answer_video(BufferedInputFile(buffer.read(), buffer.name))
+                        await message.answer_video(BufferedInputFile(buffer_val, buffer.name), caption=caption)
                     case 'audio':
-                        await message.answer_audio(BufferedInputFile(buffer.read(), buffer.name))
+                        await message.answer_audio(BufferedInputFile(buffer_val, buffer.name), caption=caption)
                     case _:
-                        await message.answer_document(BufferedInputFile(buffer.read(), buffer.name))
+                        await message.answer_document(BufferedInputFile(buffer_val, buffer.name), caption=caption)
+
+                await msg.delete()
             else:
-                await message.answer(buffer)
+                await msg.edit_text(f'{buffer}')
         except utils.DownloadError as e:
             if str(e) == 'error.api.content.video.unavailable':
                 await message.answer(f'Видео недоступно :(. Скорее всего оно имеет возрастное ограничение')
@@ -216,12 +232,17 @@ async def text(message: Message):
             await message.answer(f'error {html.escape(type(e).__name__)} {html.escape(str(e))}')
             return
 
+
+async def main():
+    await bot(DeleteWebhook(drop_pending_updates=True))
+    await dp.start_polling(bot)
+
+
 if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO,
                         format='%(asctime)s.%(msecs)03d %(levelname)s %(module)s - %(funcName)s: %(message)s',
                         datefmt='%Y-%m-%d %H:%M:%S')
-    print(bot.session.api)
-    if bot.session.api.is_local:
-        logging.info(f'Using {config.tg_api_server_session} telegram api url (local). Limits are increased.')
+    if config.tg_api_server:
+        logging.info(f'Using own {config.tg_api_server} telegram api url. Limits are increased.')
     logging.log(20, "Telegram bot has started!")
-    asyncio.run(dp.start_polling(bot))
+    asyncio.run(main())

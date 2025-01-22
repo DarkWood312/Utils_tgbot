@@ -2,11 +2,13 @@ import html
 import io
 import logging
 import re
+from dataclasses import dataclass
 from typing import *
 import aiohttp
 
 from aiogram.fsm.context import FSMContext
 
+import constants
 from constants import bot
 
 
@@ -14,6 +16,14 @@ class DownloadError(Exception):
     def __init__(self, message: str):
         self.message = message
         super().__init__(self.message)
+
+
+@dataclass(frozen=True)
+class URLObj:
+    url: str
+    protocol: str
+    host: str
+    path: str
 
 
 async def state_clear(state: FSMContext, delete_messages: bool = True, chat_id: int = None):
@@ -92,7 +102,7 @@ async def download(url: str, api_key: str, callback_status: Callable = None, **k
             async for chunk in response.content.iter_chunked(chunk_size):  # Use iter_any for streaming
                 buffer.write(chunk)
                 downloaded_size += len(chunk)
-                if downloaded_size > 50 * 1024 * 1024:
+                if downloaded_size > constants.max_file_size_upload * 1024 * 1024:
                     return await shorten_url(file_url, session)
                 chunk_count += 1
 
@@ -103,7 +113,18 @@ async def download(url: str, api_key: str, callback_status: Callable = None, **k
             await callback_status(1, downloaded_size)
         return buffer
 
-def get_tool_description(name: str, desc: str, extra: str = ''):
+
+def format_tool_description(name: str, desc: str, extra: str = '') -> str:
     return (f'<b>Название инструмента:</b> <i>{html.escape(name)}</i>\n'
             f'<b>Описание:</b> <i>{html.escape(desc)}</i>'
             f'{extra}')
+
+
+def format_file_description(file_type: str = None, file_size: int | float = None, file_size_type: str = 'Б'):
+    return (f'{f'<b>Тип файла:</b> <code>{html.escape(file_type)}</code>\n' if file_type else ''}'
+            f'{f'<b>Размер:</b> <code>{file_size:.2f}</code> <b>{html.escape(file_size_type)}</b>' if file_size else ''}')
+
+
+def get_url_parts(url: str) -> URLObj:
+    parts = re.split(r'^(([^:\/?#]+):)?(\/\/([^\/?#]*))?([^?#]*)(\?([^#]*))?(#(.*))?', url)
+    return URLObj(url, parts[2], parts[4], parts[5])

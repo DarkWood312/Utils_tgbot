@@ -4,8 +4,10 @@ import sys
 import typing
 
 import aiohttp
+import filetype
 from aiogram.types import Message
 
+import utils
 from constants import bot
 
 
@@ -35,14 +37,22 @@ async def get_file_direct_url_handler(message: Message):
         await message.answer('Невозможно загрузить файл размером больше 50 МБ :(')
         return
     file_size_text = f'{round(file_size, 2)} МБ' if file_size > 1 else f'{round(file_size * 1024, 2)} КБ'
-    file = await bot.download(filet.file_id)
+    file: typing.BinaryIO = await bot.download(filet.file_id)
     file_info = await bot.get_file(filet.file_id)
     file_name = file_info.file_path.split('/')[-1]
+    msg = await message.answer('<b>Загрузка файла...</b>')
+    try:
 
-    async with aiohttp.ClientSession() as session:
-        direct_link = await get_file_direct_url(file, session, file_name)
-    await message.answer(
-        f'<b>Прямая ссылка: </b> {html.escape(direct_link)}\n<b>Размер файла: </b><code>{file_size_text}</code>')
+        async with aiohttp.ClientSession() as session:
+            direct_link = await get_file_direct_url(file, session, file_name)
+        await message.answer(
+            f'<b>Прямая ссылка: </b> {html.escape(direct_link)}\n{utils.format_file_description(filetype.guess_mime(file), file_size, 'МБ')}')
+
+    except Exception as e:
+        await message.answer(f'error {type(e).__name__} --> {e}', parse_mode=None)
+
+    finally:
+        await msg.delete()
 
 
 

@@ -12,4 +12,6 @@ from config import token
 
 menu_text = '<b>Меню: </b>'
 
-bot = Bot(token, default=DefaultBotProperties(parse_mode=ParseMode.HTML), session=AiohttpSession(api=TelegramAPIServer.from_base(config.tg_api_server_session)) if config.tg_api_server_session else None)
+bot = Bot(token, default=DefaultBotProperties(parse_mode=ParseMode.HTML), session=AiohttpSession(api=TelegramAPIServer.from_base(config.tg_api_server)) if config.tg_api_server else None)
+max_file_size_upload = 50 if not config.tg_api_server else 2000
+max_file_size_download = 20 if not config.tg_api_server else -1
