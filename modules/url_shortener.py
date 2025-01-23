@@ -8,8 +8,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram import F
 
-import extra.keyboards
-import extra.utils
+from extra import utils, keyboards
 
 
 class UrlShortener(StatesGroup):

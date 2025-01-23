@@ -2,8 +2,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
-from extra import config
-from extra import utils
+from extra import config, utils
 
 
 async def menui() -> InlineKeyboardMarkup:
