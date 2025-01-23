@@ -248,4 +248,7 @@ if __name__ == '__main__':
     if config.tg_api_server:
         logging.info(f'Using own {config.tg_api_server} telegram api url. Limits are increased.')
     logging.log(20, "Telegram bot has started!")
-    asyncio.run(main())
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        logging.info('Bot stopped')
