@@ -2,16 +2,18 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
-import config
-import utils
+from extra import config
+from extra import utils
 
 
 async def menui() -> InlineKeyboardMarkup:
     markup = InlineKeyboardBuilder()
     if config.dl_api_key:
         markup.row(InlineKeyboardButton(text='Загрузчик', callback_data='menu:downloader'))
-    markup.row(InlineKeyboardButton(text='Сокращатель ссылок', callback_data='menu:url_shortener'))
-    markup.row(InlineKeyboardButton(text='Прямая ссылка на файл', callback_data='menu:get_file_direct_url'))
+    if config.url_shortener_status:
+        markup.row(InlineKeyboardButton(text='Сокращатель ссылок', callback_data='menu:url_shortener'))
+    if config.get_file_direct_url_status:
+        markup.row(InlineKeyboardButton(text='Прямая ссылка на файл', callback_data='menu:get_file_direct_url'))
 
     return markup.as_markup()
 

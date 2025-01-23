@@ -15,17 +15,15 @@ from aiogram.types import Message, InlineKeyboardButton, BufferedInputFile, Call
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from filetype import filetype
 
-import config
-import constants
-from constants import bot, menu_text
-import keyboards as kb
-from config import *
-import utils
-from inline_queries import register_queries
-from middlewares import register_middlewares
+from extra.constants import bot, menu_text
+import extra.keyboards as kb
+from extra.config import *
+from extra import utils, config, constants
+from extra.inline_queries import register_queries
+from extra.middlewares import register_middlewares
 from modules.handlers import register_handlers
 from modules.url_shortener import UrlShortener
-from utils import match_url, format_file_description
+from extra.utils import match_url, format_file_description
 
 dp = Dispatcher(storage=MemoryStorage())
 

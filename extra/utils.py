@@ -8,8 +8,7 @@ import aiohttp
 
 from aiogram.fsm.context import FSMContext
 
-import constants
-from constants import bot
+from extra import constants
 
 
 class DownloadError(Exception):
@@ -33,7 +32,7 @@ async def state_clear(state: FSMContext, delete_messages: bool = True, chat_id: 
     await state.clear()
 
     if 'delete' in data and delete_messages and chat_id:
-        await bot.delete_messages(chat_id, data['delete'])
+        await constants.bot.delete_messages(chat_id, data['delete'])
 
 
 async def shorten_url(long_url: str, session: aiohttp.ClientSession):

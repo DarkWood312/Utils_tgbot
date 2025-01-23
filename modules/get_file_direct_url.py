@@ -7,8 +7,8 @@ import aiohttp
 import filetype
 from aiogram.types import Message
 
-import utils
-from constants import bot
+import extra.utils
+from extra.constants import bot
 
 
 async def get_file_direct_url_handler(message: Message):

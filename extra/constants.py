@@ -5,10 +5,9 @@ from aiogram.client.default import DefaultBotProperties
 from aiogram.client.session.aiohttp import AiohttpSession
 from aiogram.client.telegram import TelegramAPIServer
 from aiogram.enums import ParseMode
-from dotenv import load_dotenv
 
-import config
-from config import token
+from extra import config
+from extra.config import token
 
 menu_text = '<b>Меню: </b>'
 
