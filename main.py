@@ -12,6 +12,7 @@ from aiogram.methods import DeleteWebhook
 from aiogram.types import Message, InlineKeyboardButton, BufferedInputFile, CallbackQuery, Update, InlineKeyboardMarkup, \
     InlineQuery, InlineQueryResult, InlineQueryResultArticle, InputMessageContent, InputTextMessageContent, \
     InputMediaDocument, InputMediaVideo, InputMediaAudio
+from aiogram.utils.chat_action import ChatActionSender
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from filetype import filetype
 
@@ -36,8 +37,6 @@ async def commandstart(message: Message, state: FSMContext):
     await utils.state_clear(state, chat_id=message.chat.id)
     if not await sql.get_user(message.from_user.id):
         await sql.add_user(message.from_user.id)
-    # await message.answer(
-    #     'Просто скинь мне ссылку на видео / аудио файл с ютуба, вк, одноклассников, рутюба, тиктока и др. а я попробую его скачать')
     await message.answer(menu_text, reply_markup=await kb.menui())
 
 
@@ -196,39 +195,45 @@ async def text(message: Message):
     body = args[0]
     if utils.match_url(body):
         settings = await sql.get_user_settings(message.from_user.id) or {}
-        await bot.send_chat_action(message.chat.id, ChatAction.UPLOAD_DOCUMENT)
         try:
             msg = await message.answer('<b>Скачивание...</b>')
             buffer = await utils.download(body, dl_api_key, None, **settings)
             if isinstance(buffer, io.BytesIO):
                 file_type = filetype.guess_mime(buffer.read(2048))
                 msg = await msg.edit_text(f'<b>Файл скачан! Отправка...</b>\n<b>Тип файла: </b> {file_type}')
-                buffer.seek(0, 2)
-                file_size = buffer.tell()
-                buffer.seek(0)
-                buffer_val = buffer.read()
-                file_typec = file_type
-                caption = format_file_description(file_type, file_size / 1024 / 1024, 'МБ')
-                if len(args) > 0 and ('-d' in args[1:] or '--doc' in args[1:]):
-                    file_typec = 'doc/doc'
-                match file_typec.split('/', 1)[0]:
-                    case 'video':
-                        await message.answer_video(BufferedInputFile(buffer_val, buffer.name), caption=caption)
-                    case 'audio':
-                        await message.answer_audio(BufferedInputFile(buffer_val, buffer.name), caption=caption)
-                    case _:
-                        await message.answer_document(BufferedInputFile(buffer_val, buffer.name), caption=caption)
+                async with ChatActionSender.upload_document(message.chat.id, bot):
+                    buffer.seek(0, 2)
+                    file_size = buffer.tell()
+                    buffer.seek(0)
+                    buffer_val = buffer.read()
+                    file_typec = file_type
+                    caption = format_file_description(file_type, file_size / 1024 / 1024, 'МБ')
+                    if len(args) > 0 and ('-d' in args[1:] or '--doc' in args[1:]):
+                        file_typec = 'doc/doc'
+                    match file_typec.split('/', 1)[0]:
+                        case 'video':
+                            await message.answer_video(BufferedInputFile(buffer_val, buffer.name), caption=caption)
+                        case 'audio':
+                            await message.answer_audio(BufferedInputFile(buffer_val, buffer.name), caption=caption)
+                        case _:
+                            await message.answer_document(BufferedInputFile(buffer_val, buffer.name), caption=caption)
 
-                await msg.delete()
+                    # await msg.delete()
             else:
-                await msg.edit_text(f'{buffer}')
+                await message.answer(f'{buffer}')
         except utils.DownloadError as e:
-            if str(e) == 'error.api.content.video.unavailable':
-                await message.answer(f'Видео недоступно :(. Скорее всего оно имеет возрастное ограничение')
+            match str(e):
+                case 'error.api.content.video.unavailable':
+                    await message.answer(f'Видео недоступно :(. Скорее всего оно имеет возрастное ограничение')
+                case 'error.api.link.invalid':
+                    await message.answer('Некорректная ссылка!')
             return
         except Exception as e:
             await message.answer(f'error {html.escape(type(e).__name__)} {html.escape(str(e))}')
             return
+
+        finally:
+            await msg.delete()
 
 
 async def main():

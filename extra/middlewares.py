@@ -1,9 +1,10 @@
 import logging
+from multiprocessing.forkserver import read_signed
 from typing import *
 
 from aiogram import Dispatcher
 from aiogram.dispatcher.event.bases import CancelHandler
-from aiogram.types import Update
+from aiogram.types import Update, Message
 from pyexpat.errors import messages
 
 
@@ -12,15 +13,15 @@ async def LoggingMiddleware(
         event: Update,
         data: Dict[str, Any]) -> Any:
     user = data['event_from_user']
-    if event.message and event.message.text:
-        logging.info(f"User {user.id} ({user.full_name}) sent a message: {event.message.text}")
+    if event.text:
+        logging.info(f"User {user.id} ({user.full_name}) sent a message: {event.text}")
     return await handler(event, data)
+
 
 async def SplitMessageMiddleware(
         handler: Callable[[Update, Dict[str, Any]], Awaitable[Any]],
         event: Update,
         data: Dict[str, Any]) -> Any:
-    print(data)
     # if event.message and event.message.text:
     #
     #     max_length = 1000
@@ -31,9 +32,11 @@ async def SplitMessageMiddleware(
     #             print(len(chunk))
     #             await event.message.answer(chunk)
     #         raise CancelHandler()
-    return await handler(event, data)
+    result: Message = await handler(event, data)
+    print(result)
+    return result
+
 
 def register_middlewares(dp: Dispatcher):
-    dp.update.outer_middleware.register(LoggingMiddleware)
-    # dp.update.middleware.register(SplitMessageMiddleware)
-    # dp.update.outer_middleware.register(SplitMessageMiddleware)
+    dp.message.outer_middleware.register(LoggingMiddleware)
+    # dp.message.middleware.register(SplitMessageMiddleware)

@@ -8,6 +8,7 @@ import zipfile
 import aiohttp
 import filetype
 from aiogram.types import Message
+from aiogram.utils.chat_action import ChatActionSender
 
 from extra import utils
 from extra.constants import bot
@@ -15,8 +16,10 @@ from extra.constants import bot
 
 async def get_file_direct_url_handler(message: Message):
     cp = message.content_type
+    no_name = False
     if cp == 'photo':
         filet = message.photo[-1]
+        no_name = True
     elif cp == 'audio':
         filet = message.audio
     elif cp == 'document':
@@ -25,23 +28,25 @@ async def get_file_direct_url_handler(message: Message):
         filet = message.video
     elif cp == 'video_note':
         filet = message.video_note
+        no_name = True
     elif cp == 'voice':
         filet = message.voice
+        no_name = True
     elif cp == 'animation':
         filet = message.animation
     else:
         await message.answer('Неизвестный тип файла')
         return
 
-    await bot.send_chat_action(message.chat.id, 'typing')
+    # await bot.send_chat_action(message.chat.id, 'typing')
     file_size = filet.file_size / 1024 ** 2
     if file_size > 50:
         await message.answer('Невозможно загрузить файл размером больше 50 МБ :(')
         return
-    file_size_text = f'{round(file_size, 2)} МБ' if file_size > 1 else f'{round(file_size * 1024, 2)} КБ'
+    # file_size_text = f'{round(file_size, 2)} МБ' if file_size > 1 else f'{round(file_size * 1024, 2)} КБ'
     file = await bot.download(filet.file_id)
     file_info = await bot.get_file(filet.file_id)
-    file_name = filet.file_name
+    file_name = filet.file_name if not no_name else file_info.file_path.split('/')[-1]
     msg = await message.answer('<b>Загрузка файла...</b>')
     if file_name[-4:].lower() == '.exe':
         await msg.edit_text('<b>Файл с расширением .exe, архивирование и загрузка...</b>')
@@ -54,19 +59,19 @@ async def get_file_direct_url_handler(message: Message):
         file = archive_buffer
         file_name = archive_buffer.name
 
+    async with ChatActionSender.typing(message.chat.id, bot):
+        try:
 
-    try:
+            async with aiohttp.ClientSession() as session:
+                direct_link = await get_file_direct_url(file, session, file_name)
+            await message.answer(
+                f'<b>Прямая ссылка: </b> {html.escape(direct_link)}\n{utils.format_file_description(filetype.guess_mime(file), file_size, 'МБ')}')
 
-        async with aiohttp.ClientSession() as session:
-            direct_link = await get_file_direct_url(file, session, file_name)
-        await message.answer(
-            f'<b>Прямая ссылка: </b> {html.escape(direct_link)}\n{utils.format_file_description(filetype.guess_mime(file), file_size, 'МБ')}')
+        except Exception as e:
+            await message.answer(f'error {type(e).__name__} --> {e}', parse_mode=None)
 
-    except Exception as e:
-        await message.answer(f'error {type(e).__name__} --> {e}', parse_mode=None)
-
-    finally:
-        await msg.delete()
+        finally:
+            await msg.delete()
 
 
 async def get_file_direct_url(file: typing.BinaryIO, session: aiohttp.client.ClientSession, filename: str = None,
