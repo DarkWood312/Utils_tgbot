@@ -68,6 +68,11 @@ async def short_url_cmd(message: Message, command: CommandObject):
     await message.answer(short_url)
 
 
+@dp.message(Command(commands=['author', 'help']))
+async def author_cmd(message: Message):
+    await message.answer('<b>Автор бота / по всем вопросам писать: </b> <a href="tg://user?id=493006916>"сюда</a>')
+
+
 @dp.message(Command(commands='get_state'))
 async def get_state_cmd(message: Message, state: FSMContext):
     await message.answer(f'state: {await state.get_state() or None}\n')
@@ -190,24 +195,22 @@ async def callback(call: CallbackQuery, state: FSMContext):
 
 @dp.message(F.text)
 async def text(message: Message):
-    buffer = None
+    # buffer = None
     args = message.text.split(' ')
     body = args[0]
     if utils.match_url(body):
         settings = await sql.get_user_settings(message.from_user.id) or {}
         try:
             msg = await message.answer('<b>Скачивание...</b>')
-            buffer = await utils.download(body, dl_api_key, None, **settings)
-            if isinstance(buffer, io.BytesIO):
-                file_type = filetype.guess_mime(buffer.read(2048))
-                msg = await msg.edit_text(f'<b>Файл скачан! Отправка...</b>\n<b>Тип файла: </b> {file_type}')
+            content = await utils.download(body, dl_api_key, None, **settings)
+            if content.buffer:
+                buffer = content.buffer
+                buffer_val = buffer.read()
+                buffer.seek(0)
+                msg = await msg.edit_text(f'<b>Файл скачан! Отправка...</b>\n<b>Тип файла: </b> {content.mimetype}')
                 async with ChatActionSender.upload_document(message.chat.id, bot):
-                    buffer.seek(0, 2)
-                    file_size = buffer.tell()
-                    buffer.seek(0)
-                    buffer_val = buffer.read()
-                    file_typec = file_type
-                    caption = format_file_description(file_type, file_size / 1024 / 1024, 'МБ')
+                    file_typec = content.mimetype
+                    caption = format_file_description(content.mimetype, content.filesize_bytes / 1024 / 1024, 'МБ')
                     if len(args) > 0 and ('-d' in args[1:] or '--doc' in args[1:]):
                         file_typec = 'doc/doc'
                     match file_typec.split('/', 1)[0]:
@@ -220,13 +223,15 @@ async def text(message: Message):
 
                     # await msg.delete()
             else:
-                await message.answer(f'{buffer}')
+                await message.answer(f'{await content.get_short_url()}\n{format_file_description(content.mimetype, content.filesize_bytes / 1024 / 1024, 'МБ')}')
         except utils.DownloadError as e:
             match str(e):
                 case 'error.api.content.video.unavailable':
                     await message.answer(f'Видео недоступно :(. Скорее всего оно имеет возрастное ограничение')
                 case 'error.api.link.invalid':
                     await message.answer('Некорректная ссылка!')
+                case _:
+                    await message.answer(str(e), parse_mode=None)
             return
         except Exception as e:
             await message.answer(f'error {html.escape(type(e).__name__)} {html.escape(str(e))}')
@@ -246,7 +251,7 @@ if __name__ == '__main__':
                         format='%(asctime)s.%(msecs)03d %(levelname)s %(module)s - %(funcName)s: %(message)s',
                         datefmt='%Y-%m-%d %H:%M:%S')
     if config.tg_api_server:
-        logging.info(f'Using own {config.tg_api_server} telegram api url. Limits are increased.')
+        logging.info(f'Using own ({config.tg_api_server}) telegram api url. Limits are increased.')
     logging.log(20, "Telegram bot has started!")
     try:
         asyncio.run(main())

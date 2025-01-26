@@ -2,13 +2,14 @@ import html
 import io
 import logging
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import *
 import aiohttp
+import filetype
 
 from aiogram.fsm.context import FSMContext
 
-from extra import constants
+from extra import constants, config
 
 
 class DownloadError(Exception):
@@ -25,6 +26,36 @@ class URLObj:
     path: str
 
 
+@dataclass(frozen=True)
+class DownloadedContent:
+    url: str
+    filename: str
+    buffer: io.BytesIO = field(default=None, repr=False)
+
+    @property
+    def mimetype(self) -> str | None:
+        if self.buffer:
+            self.buffer.seek(0)
+            mimetype = filetype.guess_mime(self.buffer.read(2048))
+            self.buffer.seek(0)
+
+            return mimetype
+        return None
+
+    @property
+    def filesize_bytes(self) -> int | None:
+        if self.buffer:
+            self.buffer.seek(0, 2)
+            filesize_bytes = self.buffer.tell()
+            self.buffer.seek(0)
+            return filesize_bytes
+        return None
+
+    async def get_short_url(self) -> str:
+        async with aiohttp.ClientSession as session:
+            return await shorten_url(self.url, session)
+
+
 async def state_clear(state: FSMContext, delete_messages: bool = True, chat_id: int = None):
     if state is None:
         return
@@ -36,6 +67,8 @@ async def state_clear(state: FSMContext, delete_messages: bool = True, chat_id: 
 
 
 async def shorten_url(long_url: str, session: aiohttp.ClientSession):
+    if not config.url_shortener_status:
+        return long_url
     async with session.post('https://spoo.me', headers={'Accept': 'application/json'},
                             data={'url': long_url}) as shortener:
         logging.info(await shortener.text())
@@ -54,7 +87,8 @@ def match_url(url: str, with_protocol: bool = True):
         url, re.IGNORECASE)
 
 
-async def download(url: str, api_key: str, callback_status: Callable = None, **kwargs) -> io.BytesIO | str:
+async def download(url: str, api_key: str, callback_status: Callable = None,
+                   **kwargs) -> DownloadedContent:
     """
 
     :param url:
@@ -88,6 +122,7 @@ async def download(url: str, api_key: str, callback_status: Callable = None, **k
 
             file_url = data['url']
             filename = data['filename']
+
             if callback_status:
                 await callback_status(2, 0)
         async with session.get(file_url) as response:
@@ -102,7 +137,11 @@ async def download(url: str, api_key: str, callback_status: Callable = None, **k
                 buffer.write(chunk)
                 downloaded_size += len(chunk)
                 if downloaded_size > constants.max_file_size_upload * 1024 * 1024:
-                    return await shorten_url(file_url, session)
+                    # if return_url_filename_buffer:
+                    #     return url, filename, None
+                    # return await shorten_url(file_url, session)
+                    return DownloadedContent(url=file_url,
+                                             filename=filename)
                 chunk_count += 1
 
                 if callback_status:
@@ -110,7 +149,11 @@ async def download(url: str, api_key: str, callback_status: Callable = None, **k
         buffer.seek(0)
         if callback_status:
             await callback_status(1, downloaded_size)
-        return buffer
+        # if return_url_filename_buffer:
+        #     return await shorten_url(file_url, session), filename, buffer
+        return DownloadedContent(url=file_url, filename=filename,
+                                 buffer=buffer)
+        # return buffer
 
 
 def format_tool_description(name: str, desc: str, extra: str = '') -> str:
