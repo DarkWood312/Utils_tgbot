@@ -29,8 +29,7 @@ async def url_query(inline_query: InlineQuery):
             #                                             message_text='...'
             #                                         )))
             try:
-                content = await utils.download(inline_query.query, dl_api_key,
-                                               **settings)
+                content = await utils.download(inline_query.query, dl_api_key, **settings)
                 # if content.buffer is not None and content.mimetype.startswith('audio'):
                     # buffer = content.buffer
                     # buffer_val = buffer.read()
@@ -52,8 +51,9 @@ async def url_query(inline_query: InlineQuery):
                                                       message_text=f'{await content.get_short_url() or content.url}\n{utils.format_file_description(content.mimetype, content.filesize_bytes / 1024 / 1024, 'МБ', content.filename)}'))
 
             except utils.DownloadError as e:
-                result = InlineQueryResultArticle(id='dl', title=html.escape(str(e)),
-                                                  input_message_content=InputTextMessageContent(message_text=';('))
+                # result = InlineQueryResultArticle(id='dl', title=html.escape(str(e)),
+                #                                   input_message_content=InputTextMessageContent(message_text=';('))
+                pass
 
             # results = results[:-1]
             results.append(result)
