@@ -21,41 +21,41 @@ async def url_query(inline_query: InlineQuery):
                                                     input_message_content=InputTextMessageContent(
                                                         message_text=await utils.shorten_url(inline_query.query,
                                                                                              session))))
-        await inline_query.answer(results)
+        # await inline_query.answer(results, cache_time=10)
         if config.dl_api_key:
             settings = await sql.get_user_settings(inline_query.from_user.id) or {}
-            results.append(InlineQueryResultArticle(id='dl', title='...',
-                                                    input_message_content=InputTextMessageContent(
-                                                        message_text='...'
-                                                    )))
+            # results.append(InlineQueryResultArticle(id='dl', title='...',
+            #                                         input_message_content=InputTextMessageContent(
+            #                                             message_text='...'
+            #                                         )))
             try:
                 content = await utils.download(inline_query.query, dl_api_key,
                                                **settings)
-                if content.buffer is not None:
-                    buffer = content.buffer
-                    buffer_val = buffer.read()
-                    caption = utils.format_file_description(content.mimetype, content.filesize_bytes / 1024 / 1024, 'МБ')
-                    match content.mimetype.split('/')[0]:
-                        case 'audio':
-                            result = InlineQueryResultAudio(id='dl', title=html.escape(content.filename), audio_url=content.url)
-                        case 'video':
-                            result = InlineQueryResultVideo(id='dl', title=html.escape(content.filename), video_url=content.url,
-                                                            mime_type=content.mimetype,
-                                                            thumbnail_url='https://files.catbox.moe/u7f0vr.jpg')
-                        case _:
-                            result = InlineQueryResultDocument(id='dl', title=html.escape(content.filename), document_url=content.url,
-                                                               mime_type=content.mimetype)
+                # if content.buffer is not None and content.mimetype.startswith('audio'):
+                    # buffer = content.buffer
+                    # buffer_val = buffer.read()
+                    # caption = utils.format_file_description(content.mimetype, content.filesize_bytes / 1024 / 1024, 'МБ')
+                #     match content.mimetype.split('/')[0]:
+                #         case 'audio':
+                #     result = InlineQueryResultAudio(id='dl', title=html.escape(content.filename), audio_url=content.url, caption=caption)
+                #         case 'video':
+                #             result = InlineQueryResultVideo(id='dl', title=html.escape(content.filename), video_url=content.url,
+                #                                             mime_type=content.mimetype,
+                #                                             thumbnail_url='https://files.catbox.moe/u7f0vr.jpg')
+                #         case _:
+                #             result = InlineQueryResultDocument(id='dl', title=html.escape(content.filename), document_url=content.url,
+                #                                                mime_type=content.mimetype)
 
-                else:
-                    result = InlineQueryResultArticle(id='dl', title=html.escape(content.filename),
-                                                      input_message_content=InputTextMessageContent(
-                                                          message_text=f'{await content.get_short_url() or content.url}\nhtml.escape(filename)'))
+                # else:
+                result = InlineQueryResultArticle(id='dl', title=html.escape(content.filename),
+                                                  input_message_content=InputTextMessageContent(
+                                                      message_text=f'{await content.get_short_url() or content.url}\n{utils.format_file_description(content.mimetype, content.filesize_bytes / 1024 / 1024, 'МБ', content.filename)}'))
 
             except utils.DownloadError as e:
                 result = InlineQueryResultArticle(id='dl', title=html.escape(str(e)),
                                                   input_message_content=InputTextMessageContent(message_text=';('))
 
-            results = results[:-1]
+            # results = results[:-1]
             results.append(result)
 
         await inline_query.answer(results=results, cache_time=0)

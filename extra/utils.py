@@ -52,7 +52,7 @@ class DownloadedContent:
         return None
 
     async def get_short_url(self) -> str:
-        async with aiohttp.ClientSession as session:
+        async with aiohttp.ClientSession() as session:
             return await shorten_url(self.url, session)
 
 
@@ -162,8 +162,10 @@ def format_tool_description(name: str, desc: str, extra: str = '') -> str:
             f'{extra}')
 
 
-def format_file_description(file_type: str = None, file_size: int | float = None, file_size_type: str = 'Б'):
-    return (f'{f'<b>Тип файла:</b> <code>{html.escape(file_type)}</code>\n' if file_type else ''}'
+def format_file_description(file_type: str = None, file_size: int | float = None, file_size_type: str = 'Б',
+                            filename: str = None):
+    return (f'{f'<b>{html.escape(filename)}</b>\n' if filename else ''}'
+            f'{f'<b>Тип файла:</b> <code>{html.escape(file_type)}</code>\n' if file_type else ''}'
             f'{f'<b>Размер:</b> <code>{file_size:.2f}</code> <b>{html.escape(file_size_type)}</b>' if file_size else ''}')
 
 
