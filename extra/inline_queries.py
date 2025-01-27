@@ -48,7 +48,7 @@ async def url_query(inline_query: InlineQuery):
                 # else:
                 result = InlineQueryResultArticle(id='dl', title=html.escape(content.filename),
                                                   input_message_content=InputTextMessageContent(
-                                                      message_text=f'{await content.get_short_url() or content.url}\n{utils.format_file_description(content.mimetype, content.filesize_bytes / 1024 / 1024, 'МБ', content.filename)}'))
+                                                      message_text=f'{await content.get_short_url() or content.url}\n{utils.format_file_description(content.mimetype, content.filesize_bytes / 1024 / 1024 if content.filesize_bytes else None, 'МБ', content.filename)}'))
 
             except utils.DownloadError as e:
                 # result = InlineQueryResultArticle(id='dl', title=html.escape(str(e)),

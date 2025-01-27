@@ -226,7 +226,7 @@ async def text(message: Message):
                     # await msg.delete()
             else:
                 await message.answer(
-                    f'{await content.get_short_url()}\n{format_file_description(content.mimetype, content.filesize_bytes / 1024 / 1024, 'МБ')}')
+                    f'{await content.get_short_url()}\n{format_file_description(content.mimetype, content.filesize_bytes / 1024 / 1024 if content.filesize_bytes else None, 'МБ', content.filename)}')
         except utils.DownloadError as e:
             match str(e):
                 case 'error.api.content.video.unavailable':
@@ -236,9 +236,9 @@ async def text(message: Message):
                 case _:
                     await message.answer(str(e), parse_mode=None)
             return
-        except Exception as e:
-            await message.answer(f'error {html.escape(type(e).__name__)} {html.escape(str(e))}')
-            return
+        # except Exception as e:
+        #     await message.answer(f'error {html.escape(type(e).__name__)} {html.escape(str(e))}')
+        #     return
 
         finally:
             await msg.delete()
