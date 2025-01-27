@@ -278,7 +278,7 @@ def main():
 
 
 async def amain():
-    await dp.start_polling()
+    await dp.start_polling(bot)
 
 
 if __name__ == '__main__':
