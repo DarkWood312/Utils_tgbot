@@ -11,9 +11,11 @@ from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.methods import DeleteWebhook
 from aiogram.types import Message, InlineKeyboardButton, BufferedInputFile, CallbackQuery, Update, InlineKeyboardMarkup, \
     InlineQuery, InlineQueryResult, InlineQueryResultArticle, InputMessageContent, InputTextMessageContent, \
-    InputMediaDocument, InputMediaVideo, InputMediaAudio
+    InputMediaDocument, InputMediaVideo, InputMediaAudio, BotCommand, BotCommandScopeDefault
 from aiogram.utils.chat_action import ChatActionSender
 from aiogram.utils.keyboard import InlineKeyboardBuilder
+from aiogram.webhook.aiohttp_server import SimpleRequestHandler, setup_application
+from aiohttp import web
 from filetype import filetype
 
 from extra.constants import bot, menu_text
@@ -223,7 +225,8 @@ async def text(message: Message):
 
                     # await msg.delete()
             else:
-                await message.answer(f'{await content.get_short_url()}\n{format_file_description(content.mimetype, content.filesize_bytes / 1024 / 1024, 'МБ')}')
+                await message.answer(
+                    f'{await content.get_short_url()}\n{format_file_description(content.mimetype, content.filesize_bytes / 1024 / 1024, 'МБ')}')
         except utils.DownloadError as e:
             match str(e):
                 case 'error.api.content.video.unavailable':
@@ -241,9 +244,41 @@ async def text(message: Message):
             await msg.delete()
 
 
-async def main():
-    await bot(DeleteWebhook(drop_pending_updates=True))
-    await dp.start_polling(bot)
+async def on_startup():
+    commands = [
+        BotCommand(command='start', description='Меню'),
+        BotCommand(command='su', description='su')
+    ]
+    await bot.set_my_commands(commands, BotCommandScopeDefault())
+    if webhook_host and webhook_path:
+        await bot.set_webhook(f'{webhook_host}{webhook_path}')
+
+
+async def on_shutdown():
+    await bot.delete_webhook(drop_pending_updates=True)
+
+    await bot.session.close()
+
+
+def main():
+    dp.startup.register(on_startup)
+    dp.shutdown.register(on_shutdown)
+
+    if webhook_host and webhook_path:
+        app = web.Application()
+
+        webhook_requests_handler = SimpleRequestHandler(dispatcher=dp, bot=bot)
+        webhook_requests_handler.register(app, path=webhook_path)
+
+        setup_application(app, dp, bot=bot)
+
+        web.run_app(app, host=webhook_host, port=5000)
+    else:
+        asyncio.run(amain())
+
+
+async def amain():
+    await dp.start_polling()
 
 
 if __name__ == '__main__':
@@ -254,6 +289,6 @@ if __name__ == '__main__':
         logging.info(f'Using own ({config.tg_api_server}) telegram api url. Limits are increased.')
     logging.log(20, "Telegram bot has started!")
     try:
-        asyncio.run(main())
+        main()
     except KeyboardInterrupt:
         logging.info('Bot stopped')
