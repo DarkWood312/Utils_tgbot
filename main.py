@@ -247,9 +247,10 @@ async def text(message: Message):
 async def on_startup():
     commands = [
         BotCommand(command='start', description='Меню'),
-        BotCommand(command='su', description='Сократить ссылку'),
         BotCommand(command='help', description='Помощь / Автор')
     ]
+    if config.url_shortener_status:
+        commands.append(BotCommand(command='su', description='Сократить ссылку'))
     await bot.set_my_commands(commands, BotCommandScopeDefault())
     if webhook_host and webhook_path:
         await bot.set_webhook(f'{webhook_host}{webhook_path}')
