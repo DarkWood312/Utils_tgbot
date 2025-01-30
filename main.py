@@ -72,7 +72,7 @@ async def short_url_cmd(message: Message, command: CommandObject):
 
 @dp.message(Command(commands=['author', 'help']))
 async def author_cmd(message: Message):
-    await message.answer('<b>Автор бота / по всем вопросам писать: </b> <a href="tg://user?id=493006916>"сюда</a>')
+    await message.answer('<b>Автор бота / по всем вопросам писать: </b> <a href="tg://user?id=493006916">сюда</a>')
 
 
 @dp.message(Command(commands='get_state'))
@@ -247,7 +247,8 @@ async def text(message: Message):
 async def on_startup():
     commands = [
         BotCommand(command='start', description='Меню'),
-        BotCommand(command='su', description='su')
+        BotCommand(command='su', description='Сократить ссылку'),
+        BotCommand(command='help', description='Помощь / Автор')
     ]
     await bot.set_my_commands(commands, BotCommandScopeDefault())
     if webhook_host and webhook_path:
