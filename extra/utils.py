@@ -2,6 +2,7 @@ import html
 import io
 import logging
 import re
+import string
 from dataclasses import dataclass, field
 from typing import *
 import aiohttp
@@ -172,3 +173,46 @@ def format_file_description(file_type: str = None, file_size: int | float = None
 def get_url_parts(url: str) -> URLObj:
     parts = re.split(r'^(([^:\/?#]+):)?(\/\/([^\/?#]*))?([^?#]*)(\?([^#]*))?(#(.*))?', url)
     return URLObj(url, parts[2], parts[4], parts[5])
+
+def to_base(num, start_base: int, end_base: int) -> str:
+    digits = string.digits + string.ascii_uppercase
+
+    def to_decimal(num_str, base):
+        decimal_ = 0
+        for i, char in enumerate(num_str[::-1]):
+            decimal_ += digits.index(char) * (base ** i)
+        return decimal_
+
+    def from_decimal(decimal_, base):
+        if decimal_ == 0:
+            return digits[0]
+        res = ""
+        while decimal_ > 0:
+            remainder = decimal_ % base
+            res = digits[remainder] + res
+            decimal_ = decimal_ // base
+        return res
+
+    if isinstance(num, str) and num[0] == '-':
+        negative = True
+        num = num[1:]
+    else:
+        negative = False
+
+    decimal = to_decimal(num, start_base)
+
+    result = from_decimal(decimal, end_base)
+
+    if negative:
+        result = '-' + result
+
+    return result
+
+def to_supb(text, option: Literal['sub', 'sup']):
+    if option == 'sub':
+        map = constants.subscript_map
+    elif option == 'sup':
+        map = constants.superscript_map
+    else:
+        return
+    return ''.join(map.get(char, char) for char in text)

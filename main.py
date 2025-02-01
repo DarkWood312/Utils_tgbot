@@ -2,6 +2,8 @@ import asyncio
 import html
 import io
 import logging
+import string
+
 import aiohttp
 from aiogram import Bot, Dispatcher, types, F
 from aiogram.enums import ParseMode, ChatAction
@@ -176,6 +178,8 @@ async def callback(call: CallbackQuery, state: FSMContext):
                 await call.message.edit_text(utils.format_tool_description('Прямая ссылка на файл',
                                                                            f'Отправьте файл (<{1000 if constants.max_file_size_download == -1 else constants.max_file_size_download} МБ) для получения прямой ссылки на него.'),
                                              reply_markup=await kb.to_menui())
+            case 'base':
+                await call.message.edit_text(utils.format_tool_description('Перевод в другую СС', 'Отправьте число или число с \'_\' в конце если оно имеет буквы'), reply_markup=await kb.to_menui())
 
 
     elif call.data.startswith('downloader:'):
@@ -191,6 +195,25 @@ async def callback(call: CallbackQuery, state: FSMContext):
                                InlineKeyboardButton(text=v, callback_data=k))
                 markup.row(InlineKeyboardButton(text='Назад', callback_data='menu:downloader'))
                 await call.message.edit_text('<b>Настройки: </b>', reply_markup=markup.as_markup())
+
+    elif call.data.startswith('digit:'):
+        digits = string.digits + string.ascii_uppercase
+        setting, value = call.data.split(':', 1)
+        markup = InlineKeyboardBuilder()
+        if value.startswith('base'):
+            num = value.split('_')[1]
+            for i in range(max(digits.index(j) + 1 for j in str(num).upper()), 37):
+                markup.add(InlineKeyboardButton(text=str(i), callback_data=f'digit:cbase_{num}_{i}'))
+            await call.message.edit_text(f'<code>{num}</code>{utils.to_supb("n", "sub")}', reply_markup=markup.as_markup())
+        elif value.startswith('cbase'):
+            if call.data.count('_') == 2:
+                num, start_base = value.split('_')[1:]
+                for i in range(2, 37):
+                    markup.add(InlineKeyboardButton(text=str(i), callback_data=f'digit:cbase_{num}_{start_base}_{i}'))
+                await call.message.edit_text(f'<code>{num}</code>{utils.to_supb(start_base, "sub")} -> X{utils.to_supb("n", "sub")}', reply_markup=markup.as_markup())
+            elif call.data.count('_') == 3:
+                num, start_base, end_base = value.split('_')[1:]
+                await call.message.edit_text(f'<code>{num}</code>{utils.to_supb(start_base, "sub")} -> <code>{utils.to_base(num, int(start_base), int(end_base))}</code>{utils.to_supb(end_base, "sub")}')
 
     await call.answer()
 
@@ -242,6 +265,13 @@ async def text(message: Message):
 
         finally:
             await msg.delete()
+    elif message.text.isdigit() or message.text[-1] == '_':
+        markup = InlineKeyboardBuilder()
+        markup.row(InlineKeyboardButton(text='Перевод в другую СС', callback_data=f'digit:base_{message.text}'))
+        await message.answer('Выберите действие:', reply_markup=markup.as_markup())
+
+    else:
+        await message.answer('непон')
 
 
 async def on_startup():
@@ -294,3 +324,5 @@ if __name__ == '__main__':
         main()
     except KeyboardInterrupt:
         logging.info('Bot stopped')
+
+#TODO inline base changer
