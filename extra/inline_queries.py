@@ -2,7 +2,7 @@ import html
 import io
 
 import aiohttp
-from aiogram import Dispatcher
+from aiogram import Dispatcher, F
 from aiogram.types import InlineQuery, InlineQueryResultArticle, InputTextMessageContent, InputMediaVideo, \
     BufferedInputFile, InputMediaAudio, InputMediaDocument, InputInvoiceMessageContent, InlineQueryResultVideo, \
     InlineQueryResultCachedVideo, InlineQueryResultAudio, InlineQueryResultDocument
@@ -57,28 +57,44 @@ async def url_query(inline_query: InlineQuery):
 
             # results = results[:-1]
             results.append(result)
-
         await inline_query.answer(results=results, cache_time=0)
+
+async def other_query(inline_query: InlineQuery):
+    results = []
+    if len(inline_query.query.split(' ')) == 3 and all(i.isdigit() for i in inline_query.query.split(' ')[1:]):
+        num, start_base, end_base = inline_query.query.split(' ')
+        results.append(InlineQueryResultArticle(id='base', title=f'{num}{utils.to_supb(start_base, "sub")} -> {utils.to_base(num, int(start_base), int(end_base))}{utils.to_supb(end_base, "sub")}',
+                                                input_message_content=InputTextMessageContent(
+                                                    message_text=f'<code>{num}</code>{utils.to_supb(start_base, "sub")} -> {utils.to_base(num, int(start_base), int(end_base))}{utils.to_supb(end_base, "sub")}')))
+
+    else:
+        results.append(InlineQueryResultArticle(id='base', title='<Число> <Из СС> <В СС> для перевода в другую СС',
+                                                input_message_content=InputTextMessageContent(message_text=':)')))
+
+    await inline_query.answer(results)
+
 
 
 async def empty_query(inline_query: InlineQuery):
-    if not inline_query.query:
-        results = []
-        if config.url_shortener_status:
-            results.append(
-                InlineQueryResultArticle(id='url_short_item', title='>Ссылка для отправки сокращенной ссылки',
-                                         input_message_content=InputTextMessageContent(message_text=':)')))
-        if config.dl_api_key:
-            results.append(
-                InlineQueryResultArticle(id='dl_item',
-                                         title='>Ссылка на контент для скачивания по настройкам пользователя',
-                                         input_message_content=InputTextMessageContent(message_text=':)'))
-            )
-        await inline_query.answer(results=results)
-        return
-    await inline_query.answer(results=[])
+    results = []
+    if config.url_shortener_status:
+        results.append(
+            InlineQueryResultArticle(id='url_short_item', title='>Ссылка для отправки сокращенной ссылки',
+                                     input_message_content=InputTextMessageContent(message_text=':)')))
+    if config.dl_api_key:
+        results.append(
+            InlineQueryResultArticle(id='dl_item',
+                                     title='>Ссылка на контент для скачивания по настройкам пользователя',
+                                     input_message_content=InputTextMessageContent(message_text=':)'))
+        )
+    results.append(
+        InlineQueryResultArticle(id='base_item', title='> <Число> <Из СС> <В СС> для перевода в другую СС',
+                                 input_message_content=InputTextMessageContent(message_text=':)'))
+    )
+    await inline_query.answer(results=results)
 
 
 def register_queries(dp: Dispatcher):
     dp.inline_query.register(url_query, lambda query: bool(utils.match_url(query.query)))
-    dp.inline_query.register(empty_query)
+    dp.inline_query.register(empty_query, ~F.query)
+    dp.inline_query.register(other_query)
