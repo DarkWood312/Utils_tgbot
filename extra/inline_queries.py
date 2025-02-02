@@ -1,5 +1,6 @@
 import html
 import io
+import string
 
 import aiohttp
 from aiogram import Dispatcher, F
@@ -61,7 +62,9 @@ async def url_query(inline_query: InlineQuery):
 
 async def other_query(inline_query: InlineQuery):
     results = []
-    if len(inline_query.query.split(' ')) == 3 and all(i.isdigit() for i in inline_query.query.split(' ')[1:]):
+    spl = inline_query.query.split(' ')
+    digits = string.digits + string.ascii_uppercase
+    if len(spl) == 3 and all(i.isdigit() for i in spl[1:]) and all(i.upper() in digits for i in spl[0]) and int(spl[1]) > max(digits.index(i.upper()) for i in spl[0]):
         num, start_base, end_base = inline_query.query.split(' ')
         results.append(InlineQueryResultArticle(id='base', title=f'{num}{utils.to_supb(start_base, "sub")} -> {utils.to_base(num, int(start_base), int(end_base))}{utils.to_supb(end_base, "sub")}',
                                                 input_message_content=InputTextMessageContent(
