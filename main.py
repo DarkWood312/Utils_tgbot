@@ -80,7 +80,7 @@ async def author_cmd(message: Message):
 @dp.message(Command(commands='get_state'))
 async def get_state_cmd(message: Message, state: FSMContext):
     await message.answer(f'state: {await state.get_state() or None}\n')
-    # f'state_data {await state.get_data() or None}')
+    # f'state_data {await state.get_data() or None}')]
 
 
 @dp.callback_query(F.data == 'cancel')
@@ -277,7 +277,9 @@ async def text(message: Message):
 async def on_startup():
     commands = [
         BotCommand(command='start', description='Меню'),
-        BotCommand(command='help', description='Помощь / Автор')
+        BotCommand(command='help', description='Помощь / Автор'),
+        BotCommand(command='encrypt', description='Зашифровать текст'),
+        BotCommand(command='decrypt', description='Расшифровать текст')
     ]
     if config.url_shortener_status:
         commands.append(BotCommand(command='su', description='Сократить ссылку'))

@@ -1,3 +1,4 @@
+import base64
 import html
 import io
 import logging
@@ -7,7 +8,7 @@ from dataclasses import dataclass, field
 from typing import *
 import aiohttp
 import filetype
-
+from cryptography.fernet import Fernet
 from aiogram.fsm.context import FSMContext
 
 from extra import constants, config
