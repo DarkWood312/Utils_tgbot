@@ -6,3 +6,4 @@ python-dotenv~=1.0.1
 filetype~=1.2.0
 cryptography~=44.0.2
 steam~=1.4.4
+binwalkpy~=0.1.0

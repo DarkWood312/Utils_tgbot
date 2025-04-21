@@ -13,10 +13,19 @@ async def menui() -> InlineKeyboardMarkup:
         markup.row(InlineKeyboardButton(text='Сокращатель ссылок', callback_data='menu:url_shortener'))
     if config.get_file_direct_url_status:
         markup.row(InlineKeyboardButton(text='Прямая ссылка на файл', callback_data='menu:get_file_direct_url'))
-    markup.row(InlineKeyboardButton(text='Перевод в другую СС', callback_data='menu:base'))
+    # markup.row(InlineKeyboardButton(text='Перевод в другую СС', callback_data='menu:base'))
+    markup.row(InlineKeyboardButton(text='CTF Tools', callback_data='menu:ctf_tools'))
 
     return markup.as_markup()
 
+async def ctf_toolsi() -> InlineKeyboardMarkup:
+    markup = InlineKeyboardBuilder()
+    markup.row(InlineKeyboardButton(text='Перевод в другую СС', callback_data='ctf_tools:base'))
+    markup.row(InlineKeyboardButton(text='Binwalk', callback_data='ctf_tools:binwalk'))
+
+    markup.row(await to_kbi(button=True))
+
+    return markup.as_markup()
 
 async def canceli(button: bool = False) -> InlineKeyboardMarkup | InlineKeyboardButton:
     markup = InlineKeyboardBuilder()
@@ -27,11 +36,12 @@ async def canceli(button: bool = False) -> InlineKeyboardMarkup | InlineKeyboard
     return markup.as_markup()
 
 
-async def to_menui(button: bool = False) -> InlineKeyboardMarkup | InlineKeyboardButton:
+async def to_kbi(button: bool = False, callback_data = "menu:menu", text="В меню") -> InlineKeyboardMarkup | InlineKeyboardButton:
     markup = InlineKeyboardBuilder()
-    b = InlineKeyboardButton(text='В меню', callback_data='menu:menu')
+    b = InlineKeyboardButton(text=text, callback_data=callback_data)
     if button:
         return b
     markup.row(b)
 
     return markup.as_markup()
+
