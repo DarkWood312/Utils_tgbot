@@ -20,7 +20,7 @@ from aiogram.webhook.aiohttp_server import SimpleRequestHandler, setup_applicati
 from aiohttp import web
 from filetype import filetype
 
-from extra.constants import bot, menu_text
+from extra.constants import bot
 import extra.keyboards as kb
 from extra.config import *
 from extra import utils, config, constants
@@ -43,7 +43,7 @@ async def commandstart(message: Message, state: FSMContext):
     await utils.state_clear(state, chat_id=message.chat.id)
     if not await sql.get_user(message.from_user.id):
         await sql.add_user(message.from_user.id)
-    await message.answer(menu_text, reply_markup=await kb.menui())
+    await message.answer(await utils.get_menu_text(), reply_markup=await kb.menui())
 
 
 # @dp.message(Command(commands='settings'))
@@ -92,7 +92,7 @@ async def cancel_callback(call: CallbackQuery, state: FSMContext):
     if 'edit' in data and 'to_kwargs' in data:
         await data['edit'].edit_text(**data['to_kwargs'])
     else:
-        await call.message.edit_text(menu_text, reply_markup=await kb.menui())
+        await call.message.edit_text(await utils.get_menu_text(), reply_markup=await kb.menui())
     await call.answer()
 
 
@@ -159,7 +159,7 @@ async def callback(call: CallbackQuery, state: FSMContext):
         match value:
             case 'menu':
                 await utils.state_clear(state, chat_id=call.message.chat.id)
-                await call.message.edit_text(menu_text)
+                await call.message.edit_text(await utils.get_menu_text())
                 await call.message.edit_reply_markup(reply_markup=await kb.menui())
             case 'downloader':
                 downloader_markup = InlineKeyboardBuilder()

@@ -9,7 +9,7 @@ from aiogram.enums import ParseMode
 from extra import config
 from extra.config import token
 
-menu_text = '<b>Меню: </b>'
+# menu_text = f'''<b>Меню: </b>\n'''
 
 bot = Bot(token, default=DefaultBotProperties(parse_mode=ParseMode.HTML), session=AiohttpSession(api=TelegramAPIServer.from_base(config.tg_api_server)) if config.tg_api_server else None)
 max_file_size_upload = 50 if not config.tg_api_server else 2000

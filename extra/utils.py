@@ -5,14 +5,15 @@ import logging
 import re
 import string
 from dataclasses import dataclass, field
+from datetime import timedelta, datetime
 from typing import *
 import aiohttp
 import filetype
+from aiogram.client.session.aiohttp import AiohttpSession
 from cryptography.fernet import Fernet
 from aiogram.fsm.context import FSMContext
 
 from extra import constants, config
-
 
 class DownloadError(Exception):
     def __init__(self, message: str):
@@ -217,3 +218,42 @@ def to_supb(text, option: Literal['sub', 'sup']):
     else:
         return
     return ''.join(map.get(char, char) for char in text)
+
+
+async def get_currency(session: aiohttp.ClientSession | None, from_currency: str, to_currency: str = 'rub', amount: float = 1) -> float:
+    if session is None:
+        session = aiohttp.ClientSession()
+    async with session.get(f'https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/{from_currency}.json') as response:
+        data = await response.json()
+        currency = data[from_currency.lower()][to_currency.lower()] * amount
+        if currency > 10000:
+            currency = round(currency)
+        elif currency > 100:
+            currency = round(currency, 2)
+        elif currency > 10:
+            currency = round(currency, 3)
+        elif currency > 1:
+            currency = round(currency, 4)
+        else:
+            pass
+        return currency
+
+
+current_currency = {}
+async def get_menu_text(session: aiohttp.ClientSession | None = None) -> str:
+    global current_currency
+    print(current_currency)
+    if (current_currency == {}) or (current_currency['last_update'] - datetime.now() > timedelta(minutes=10)):
+        print(1)
+        if session is None:
+            session = aiohttp.ClientSession()
+        current_currency = {'last_update': datetime.now(),
+                            'usd_rub': await get_currency(session, 'usd'),
+                            'btc_usd': await get_currency(session, 'btc', 'usd'),
+                            'btc_rub': await get_currency(session, 'btc', 'rub')}
+        print(current_currency)
+    print(current_currency)
+    return f'''<b>Меню: </b>\n
+<b>Курс</b>:
+<b>USD/RUB</b>: <code>{current_currency['usd_rub']}</code> $
+<b>BTC/USD(RUB)</b>: <code>{current_currency['btc_usd']}</code> $ (<code>{current_currency['btc_rub']}</code> ₽)\n'''
