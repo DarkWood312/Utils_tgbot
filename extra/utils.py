@@ -256,4 +256,4 @@ async def get_menu_text(session: aiohttp.ClientSession | None = None) -> str:
     return f'''<b>Меню: </b>\n
 <b>Курс</b>:
 <b>USD/RUB</b>: <code>{current_currency['usd_rub']}</code> $
-<b>BTC/USD(RUB)</b>: <code>{current_currency['btc_usd']}</code> $ (<code>{current_currency['btc_rub']}</code> ₽)\n'''
+<b>BTC/USD(RUB)</b>: <code>{current_currency['btc_usd']}</code> $ (<code>{current_currency['btc_rub']}</code> ₽)'''
