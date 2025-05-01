@@ -1,0 +1,36 @@
+version: '3.8'
+
+services:
+  telegram_bot:
+    image: ghcr.io/darkwood312/utils_tgbot:prod
+    container_name: tg_bot
+#    volumes:
+#      - ./cache:/app/cache
+#      - ./logs:/app/logs
+    restart: unless-stopped
+    environment:
+#      - TZ=UTC
+#      - TOKEN=
+#      - SQL_HOST=
+#      - SQL_PORT=
+#      - SQL_USER=
+#      - SQL_DATABASE=
+#      - SQL_PASSWORD=
+#      - DL_API_KEY=
+#      - SHORTENER_API_URL=
+
+  # Uncomment if you need a database
+  # database:
+  #   image: postgres:17
+  #   container_name: postgres
+  #   volumes:
+  #     - postgres_data:/var/lib/postgresql/data
+  #   environment:
+  #     - POSTGRES_PASSWORD=dwip312
+  #     - POSTGRES_USER=sasha
+  #     - POSTGRES_DB=bot
+  #   restart: always
+
+# Uncomment if you need database volumes
+# volumes:
+#   postgres_data:
