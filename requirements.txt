@@ -7,3 +7,4 @@ cryptography~=44.0.2
 steam~=1.4.4
 binwalkpy~=0.1.0
 SQLAlchemy~=2.0.40
+asyncpg~=0.30.0
