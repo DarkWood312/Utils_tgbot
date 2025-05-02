@@ -22,6 +22,7 @@ async def ctf_toolsi() -> InlineKeyboardMarkup:
     markup = InlineKeyboardBuilder()
     markup.row(InlineKeyboardButton(text='Перевод в другую СС', callback_data='ctf_tools:base'))
     markup.row(InlineKeyboardButton(text='Binwalk', callback_data='ctf_tools:binwalk'))
+    markup.row(InlineKeyboardButton(text='Стеганография', callback_data='ctf_tools:steganography'))
 
     markup.row(await to_kbi(button=True))
 

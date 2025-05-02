@@ -27,7 +27,8 @@ from extra import utils, config, constants
 from extra.inline_queries import register_queries
 from extra.keyboards import canceli
 from extra.middlewares import register_middlewares
-from modules.binwalk import binwalk_handler, Binwalk
+from modules.ctf_tools.binwalk import binwalk_handler, Binwalk
+from modules.ctf_tools.steganography import Steganography
 from modules.handlers import register_handlers
 from modules.url_shortener import UrlShortener
 from extra.utils import match_url, format_file_description
@@ -193,6 +194,9 @@ async def callback(call: CallbackQuery, state: FSMContext):
             case 'binwalk':
                 await call.message.edit_text(utils.format_tool_description("Binwalk", "Инструмент для анализа файлов. Отправьте боту файл (до 20 МБ из-за ограничения телеграмма)"), reply_markup=await canceli())
                 await state.set_state(Binwalk.wait_for_file)
+            case 'steganography':
+                await call.message.edit_text(utils.format_tool_description("Steganography", "Инструмент для анализа изображений. Отправьте боту фото"), reply_markup=await canceli())
+                await state.set_state(Steganography.wait_for_file)
 
 
 
