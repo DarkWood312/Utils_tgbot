@@ -8,6 +8,6 @@ steam~=1.4.4
 binwalkpy~=0.1.0
 SQLAlchemy~=2.0.40
 asyncpg~=0.30.0
-opencv-python~=4.11.0.86
+opencv-python-headless~=4.11.0.86
 numpy~=2.2.5
 pillow~=10.4.0
