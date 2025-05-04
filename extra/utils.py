@@ -226,14 +226,24 @@ current_currency = {}
 async def get_menu_text(session: aiohttp.ClientSession | None = None) -> str:
     global current_currency
     if (current_currency == {}) or (current_currency['last_update'] - datetime.now() > timedelta(minutes=10)):
-        if session is None:
-            session = aiohttp.ClientSession()
-        c = Currency(session)
+        sess = session or aiohttp.ClientSession()
+        c = Currency(sess)
         current_currency = {'last_update': datetime.now(),
                             'usd_rub': await c.get_currency('usd'),
                             'btc_usd': await c.get_currency('btc', 'usd'),
                             'btc_rub': await c.get_currency('btc', 'rub')}
+        if not session:
+            await sess.close()
     return f'''<b>Меню: </b>\n
 <b>Курс</b>:
 <b>USD/RUB</b>: <code>{current_currency['usd_rub']}</code> ₽
 <b>BTC/USD(RUB)</b>: <code>{current_currency['btc_usd']}</code> $ (<code>{current_currency['btc_rub']}</code> ₽)'''
+
+async def host_text(text: str, session: aiohttp.ClientSession | None = None) -> str:
+    sess = session or aiohttp.ClientSession()
+    async with sess.post("https://paste.rs/", data=text) as response:
+        rdata = await response.text()
+    if not session:
+        await sess.close()
+    return rdata
+

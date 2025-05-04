@@ -28,6 +28,7 @@ from extra.inline_queries import register_queries
 from extra.keyboards import canceli
 from extra.middlewares import register_middlewares
 from modules.ctf_tools.binwalk import binwalk_handler, Binwalk
+from modules.ctf_tools.exif import Exif
 from modules.ctf_tools.steganography import Steganography
 from modules.handlers import register_handlers
 from modules.url_shortener import UrlShortener
@@ -195,8 +196,16 @@ async def callback(call: CallbackQuery, state: FSMContext):
                 await call.message.edit_text(utils.format_tool_description("Binwalk", "Инструмент для анализа файлов. Отправьте боту файл (до 20 МБ из-за ограничения телеграмма)"), reply_markup=await canceli())
                 await state.set_state(Binwalk.wait_for_file)
             case 'steganography':
-                await call.message.edit_text(utils.format_tool_description("Steganography", "Инструмент для анализа изображений. Отправьте боту фото"), reply_markup=await canceli())
+                await call.message.edit_text(utils.format_tool_description("Stegsolve", "Инструмент для анализа изображений. Отправьте боту фото (до 20 МБ из-за ограничения телеграмма)"), reply_markup=await canceli())
                 await state.set_state(Steganography.wait_for_file)
+            case 'chepy':
+                await call.message.edit_text(utils.format_tool_description("Анализ данных", "Инструмент для анализа данных в виде текста"), reply_markup=await canceli())
+            case 'exif':
+                await call.message.edit_text(
+                    utils.format_tool_description("Получение метаданных", "Инструмент для получения метаданных файла. Отправьте боту файл (до 20 МБ из-за ограничения телеграмма)"),
+                    reply_markup=await canceli())
+                await state.set_state(Exif.wait_for_file)
+
 
 
 
