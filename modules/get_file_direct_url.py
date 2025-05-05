@@ -107,10 +107,8 @@ async def get_file_direct_url(file: typing.BinaryIO, session: aiohttp.ClientSess
     async with sess.post(base_url, data=form_data, headers={
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/118.0.5993.771 YaBrowser/23.11.2.771 Yowser/2.5 Safari/537.36'}) as r:
         logging.info(f'got file direct link {r}')
-        # if not r.status == 200:
-        #     await get_file_direct_link(file, sess, filename, expires_in='72h')
-        # else:
-        rtext = await r.text()
+        rtext = await r.json()
+    url = rtext['files'][0]['url'].replace('\\', '')
     if not session:
         await sess.close()
-    return rtext
+    return url

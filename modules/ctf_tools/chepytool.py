@@ -25,6 +25,7 @@ class ChepyExtra(Chepy):
 
         #TODO
         self.available_methods = ('to_hex', 'from_hex', 'bruteforce_from_base_xx', 'bruteforce_to_base_xx', 'to_binary', 'from_binary',)
+        self.banned_methods = ('')
 
     def _record_state(self):
         """
@@ -85,14 +86,14 @@ class ChepyExtra(Chepy):
 
     @property
     def get_history(self):
-        return self.history[:-1] if len(self.history) > 1 else []
+        return self.history if len(self.history) >= 1 else []
 
     def _list_methods_without_additional_args(self):
         """
         Return a list of all user-available Chepy methods with their signatures.
         """
         methods = []
-        for name, member in inspect.getmembers(ChepyExtra, predicate=inspect.isroutine):
+        for name, member in inspect.getmembers(self, predicate=inspect.isroutine):
             # Skip private and internal methods
             if name.startswith('_'):
                 continue
@@ -102,7 +103,7 @@ class ChepyExtra(Chepy):
             except (ValueError, TypeError):
                 sig = None
             # Format as name(signature)
-            if len(sig.parameters.keys()) > 1:
+            if len(sig.parameters.keys()) > 1 or name in self.banned_methods:
                 continue
             methods.append(name)
         return sorted(methods)
@@ -217,6 +218,6 @@ async def chepy_callback_handler(call: CallbackQuery, state: FSMContext):
         #     await data['remove_msg'].delete()
 
         await call.answer()
-    except ConnectionAbortedError as e:
-        await call.answer("Произошла ошибка. Возможно, вы выбрали неверный метод.")
+    except Exception as e:
+        await call.answer(f"Произошла ошибка. Возможно, вы выбрали неверный метод.\n{e}")
         return
