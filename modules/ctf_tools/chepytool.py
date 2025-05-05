@@ -7,7 +7,7 @@ import base58
 from aiogram import types
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import StatesGroup, State
-from aiogram.types import Message, CallbackQuery, InlineKeyboardButton
+from aiogram.types import Message, CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from chepy import Chepy
 from chepy.core import ChepyDecorators
@@ -87,27 +87,71 @@ class ChepyExtra(Chepy):
     def get_history(self):
         return self.history[:-1] if len(self.history) > 1 else []
 
-    # def list_methods(self):
-    #     """
-    #     Return a list of all user-available Chepy methods with their signatures.
-    #     """
-    #     methods = []
-    #     for name, member in inspect.getmembers(Chepy, predicate=inspect.isroutine):
-    #         # Skip private and internal methods
-    #         if name.startswith('_'):
-    #             continue
-    #         # Get the signature, if possible
-    #         try:
-    #             sig = inspect.signature(member)
-    #         except (ValueError, TypeError):
-    #             sig = None
-    #         # Format as name(signature)
-    #         methods.append(f"{name}{sig}")
-    #     return sorted(methods)
+    def _list_methods_without_additional_args(self):
+        """
+        Return a list of all user-available Chepy methods with their signatures.
+        """
+        methods = []
+        for name, member in inspect.getmembers(ChepyExtra, predicate=inspect.isroutine):
+            # Skip private and internal methods
+            if name.startswith('_'):
+                continue
+            # Get the signature, if possible
+            try:
+                sig = inspect.signature(member)
+            except (ValueError, TypeError):
+                sig = None
+            # Format as name(signature)
+            if len(sig.parameters.keys()) > 1:
+                continue
+            methods.append(name)
+        return sorted(methods)
 
 
 class ChepyTool(StatesGroup):
     main = State()
+
+async def build_methods_keyboard(c, page: int = 0, page_size: int = 10) -> InlineKeyboardMarkup:
+    methods = c.available_methods
+    start = page * page_size
+    end = start + page_size
+    page_methods = methods[start:end]
+
+    kb = InlineKeyboardBuilder()
+
+    # add method buttons
+    for method in page_methods:
+        kb.row(
+            InlineKeyboardButton(
+                text=method,
+                callback_data=f"chepy:{page}:{method}"
+            )
+        )
+
+    # navigation row
+    nav_buttons = []
+    if page > 0:
+        nav_buttons.append(
+            InlineKeyboardButton(
+                text="⟨",
+                callback_data=f"chepy_page:{page-1}"
+            )
+        )
+    if end < len(methods):
+        nav_buttons.append(
+            InlineKeyboardButton(
+                text="⟩",
+                callback_data=f"chepy_page:{page+1}"
+            )
+        )
+    if nav_buttons:
+        kb.row(*nav_buttons)
+
+    # cancel row
+    kb.row(await keyboards.canceli(True))
+
+    return kb.as_markup()
+
 
 
 async def chepy_start_handler(message: Message, state: FSMContext):
@@ -119,26 +163,27 @@ async def chepy_start_handler(message: Message, state: FSMContext):
 
     c = ChepyExtra(message.text)
     await state.update_data({'chepy': c})
-    reply_markup = InlineKeyboardBuilder()
-    for method in c.available_methods:
-        reply_markup.row(InlineKeyboardButton(text=method, callback_data=f'chepy:{method}'))
-    reply_markup.row(await keyboards.canceli(True))
 
     await message.answer(f"<code>{html.escape(str(message.text))}</code>\n"
-                               "<b>Выберите действие:</b>", reply_markup=reply_markup.as_markup())
+                               "<b>Выберите действие:</b>", reply_markup=await build_methods_keyboard(c))
     # await state.update_data({'remove_msg': msg})
+
 
 async def chepy_callback_handler(call: CallbackQuery, state: FSMContext):
     try:
         data = await state.get_data()
         c: ChepyExtra = data.get('chepy')
+        if call.data.startswith("chepy_page"):
+            markup = await build_methods_keyboard(c, int(call.data.split('chepy_page:')[1]))
+            await call.message.edit_reply_markup(reply_markup=markup)
+            return
         # if not c:
         #     await call.answer("Сначала отправьте текст!")
         #     return
-        method = call.data.split(':')[1]
         # if method not in c.available_methods:
         #     await call.answer("Метод не найден!")
         #     return
+        way, page, method = call.data.split(':')
         result: ChepyExtra = getattr(c, method)()
         formatted_result = result.o
 
@@ -166,7 +211,7 @@ async def chepy_callback_handler(call: CallbackQuery, state: FSMContext):
 
 
         await call.message.edit_text(f"{formatted_result}\n"
-                                  f"История: {make_history(c.get_history)}", reply_markup=reply_markup.as_markup())
+                                     f"История: {make_history(c.get_history)}", reply_markup=await build_methods_keyboard(c, int(page)))
         await state.update_data({'chepy': result})
         # if 'remove_msg' in data and data['remove_msg']:
         #     await data['remove_msg'].delete()

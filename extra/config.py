@@ -2,6 +2,7 @@ import os
 
 import requests
 from dotenv import load_dotenv
+from requests import ConnectTimeout
 
 from extra.SQL import DB
 
@@ -23,5 +24,12 @@ dl_api_key = os.getenv('DL_API_KEY')
 tg_api_server = os.getenv('TG_API_SERVER')
 sql = DB(host=sql_host, port=int(sql_port), user=sql_user, database=sql_database, password=sql_password)
 
-url_shortener_status = True if 200 <= requests.get('https://spoo.me').status_code <= 299 else False
-get_file_direct_url_status = True if 200 <= requests.get('https://catbox.moe').status_code <= 299 else False
+try:
+    url_shortener_status = True if 200 <= requests.get('https://spoo.me').status_code <= 299 else False
+except ConnectTimeout:
+    url_shortener_status = False
+
+try:
+    get_file_direct_url_status = True if 200 <= requests.get('https://pomf.lain.la/').status_code <= 299 else False
+except ConnectTimeout:
+    get_file_direct_url_status = False

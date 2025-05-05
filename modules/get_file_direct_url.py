@@ -74,21 +74,43 @@ async def get_file_direct_url_handler(message: Message):
             await msg.delete()
 
 
-async def get_file_direct_url(file: typing.BinaryIO, session: aiohttp.client.ClientSession, filename: str = None,
-                              expires_in: str | None = None) -> str:
+# async def get_file_direct_url(file: typing.BinaryIO, session: aiohttp.client.ClientSession, filename: str = None,
+#                               expires_in: str | None = None) -> str:
+#     form_data = aiohttp.FormData()
+#     form_data.add_field('reqtype', 'fileupload')
+#     base_url = 'https://catbox.moe/user/api.php'
+#     fileb = file.read()
+#     file_size = sys.getsizeof(fileb)
+#     if expires_in or ((file_size / 1024 ** 2) > 200):
+#         base_url = 'https://litterbox.catbox.moe/resources/internals/api.php'
+#         form_data.add_field('time', expires_in)
+#     form_data.add_field('fileToUpload', fileb, filename=filename or file.name)
+#     async with session.post(base_url, data=form_data, headers={
+#         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/118.0.5993.771 YaBrowser/23.11.2.771 Yowser/2.5 Safari/537.36'}) as r:
+#         logging.info(f'got file direct link {r}')
+#         # if not r.status == 200:
+#         #     await get_file_direct_link(file, session, filename, expires_in='72h')
+#         # else:
+#         return await r.text()
+
+async def get_file_direct_url(file: typing.BinaryIO, session: aiohttp.ClientSession = None, filename: str = None) -> str | bool:
+    sess = session
+    if sess is None:
+        sess = aiohttp.ClientSession()
     form_data = aiohttp.FormData()
-    form_data.add_field('reqtype', 'fileupload')
-    base_url = 'https://catbox.moe/user/api.php'
+    base_url = 'https://pomf.lain.la/upload.php'
     fileb = file.read()
     file_size = sys.getsizeof(fileb)
-    if expires_in or ((file_size / 1024 ** 2) > 200):
-        base_url = 'https://litterbox.catbox.moe/resources/internals/api.php'
-        form_data.add_field('time', expires_in)
-    form_data.add_field('fileToUpload', fileb, filename=filename or file.name)
-    async with session.post(base_url, data=form_data, headers={
+    if file_size / (1024 * 1024) > 2000:
+        return False
+    form_data.add_field(name='files[]', value=fileb, filename=filename or file.name, content_type=filetype.guess_mime(fileb[:2048]))
+    async with sess.post(base_url, data=form_data, headers={
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/118.0.5993.771 YaBrowser/23.11.2.771 Yowser/2.5 Safari/537.36'}) as r:
         logging.info(f'got file direct link {r}')
         # if not r.status == 200:
-        #     await get_file_direct_link(file, session, filename, expires_in='72h')
+        #     await get_file_direct_link(file, sess, filename, expires_in='72h')
         # else:
-        return await r.text()
+        rtext = await r.text()
+    if not session:
+        await sess.close()
+    return rtext
