@@ -18,6 +18,7 @@ from aiogram.utils.chat_action import ChatActionSender
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.webhook.aiohttp_server import SimpleRequestHandler, setup_application
 from aiohttp import web
+from modules.ctf_tools.chepytool import ChepyTool
 from filetype import filetype
 
 from extra.constants import bot
@@ -200,6 +201,7 @@ async def callback(call: CallbackQuery, state: FSMContext):
                 await state.set_state(Steganography.wait_for_file)
             case 'chepy':
                 await call.message.edit_text(utils.format_tool_description("Анализ данных", "Инструмент для анализа данных в виде текста"), reply_markup=await canceli())
+                await state.set_state(ChepyTool.main)
             case 'exif':
                 await call.message.edit_text(
                     utils.format_tool_description("Получение метаданных", "Инструмент для получения метаданных файла. Отправьте боту файл (до 20 МБ из-за ограничения телеграмма)"),

@@ -23,6 +23,7 @@ async def ctf_toolsi() -> InlineKeyboardMarkup:
     markup.row(InlineKeyboardButton(text='Перевод в другую СС', callback_data='ctf_tools:base'))
     markup.row(InlineKeyboardButton(text='Binwalk', callback_data='ctf_tools:binwalk'))
     markup.row(InlineKeyboardButton(text='Стеганография', callback_data='ctf_tools:steganography'))
+    markup.row(InlineKeyboardButton(text='Chepy (аналог Cyberchef)', callback_data='ctf_tools:chepy'))
     markup.row(InlineKeyboardButton(text='Метаданные (exif)', callback_data='ctf_tools:exif'))
 
     markup.row(await to_kbi(button=True))
