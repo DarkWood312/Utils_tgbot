@@ -134,14 +134,14 @@ async def build_methods_keyboard(c, page: int = 0, page_size: int = 10) -> Inlin
     if page > 0:
         nav_buttons.append(
             InlineKeyboardButton(
-                text="⟨",
+                text="-->",
                 callback_data=f"chepy_page:{page-1}"
             )
         )
     if end < len(methods):
         nav_buttons.append(
             InlineKeyboardButton(
-                text="⟩",
+                text="<--",
                 callback_data=f"chepy_page:{page+1}"
             )
         )
