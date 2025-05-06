@@ -5,7 +5,7 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 from extra import config, utils
 
 
-async def menui() -> InlineKeyboardMarkup:
+def menui() -> InlineKeyboardMarkup:
     markup = InlineKeyboardBuilder()
     if config.dl_api_key:
         markup.row(InlineKeyboardButton(text='Загрузчик', callback_data='menu:downloader'))
@@ -18,7 +18,7 @@ async def menui() -> InlineKeyboardMarkup:
 
     return markup.as_markup()
 
-async def ctf_toolsi() -> InlineKeyboardMarkup:
+def ctf_toolsi() -> InlineKeyboardMarkup:
     markup = InlineKeyboardBuilder()
     markup.row(InlineKeyboardButton(text='Перевод в другую СС', callback_data='ctf_tools:base'))
     markup.row(InlineKeyboardButton(text='Binwalk', callback_data='ctf_tools:binwalk'))
@@ -26,11 +26,11 @@ async def ctf_toolsi() -> InlineKeyboardMarkup:
     markup.row(InlineKeyboardButton(text='Chepy (аналог Cyberchef)', callback_data='ctf_tools:chepy'))
     markup.row(InlineKeyboardButton(text='Метаданные (exif)', callback_data='ctf_tools:exif'))
 
-    markup.row(await to_kbi(button=True))
+    markup.row(to_kbi(button=True))
 
     return markup.as_markup()
 
-async def canceli(button: bool = False) -> InlineKeyboardMarkup | InlineKeyboardButton:
+def canceli(button: bool = False) -> InlineKeyboardMarkup | InlineKeyboardButton:
     markup = InlineKeyboardBuilder()
     b = InlineKeyboardButton(text='Отмена', callback_data='cancel')
     if button:
@@ -39,7 +39,7 @@ async def canceli(button: bool = False) -> InlineKeyboardMarkup | InlineKeyboard
     return markup.as_markup()
 
 
-async def to_kbi(button: bool = False, callback_data = "menu:menu", text="В меню") -> InlineKeyboardMarkup | InlineKeyboardButton:
+def to_kbi(button: bool = False, callback_data = "menu:menu", text="В меню") -> InlineKeyboardMarkup | InlineKeyboardButton:
     markup = InlineKeyboardBuilder()
     b = InlineKeyboardButton(text=text, callback_data=callback_data)
     if button:

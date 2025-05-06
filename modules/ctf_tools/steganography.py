@@ -40,7 +40,7 @@ def analyze_image(img: bytes, ext: str = 'png', jpeg_quality: int = 95) -> dict[
 async def steganography_handler(message: Message, state: FSMContext):
     data = await state.get_data()
     if not message.document:
-        msg = await message.answer('<b>Отправьте боту фото как файл!</b>', reply_markup=await keyboards.to_kbi())
+        msg = await message.answer('<b>Отправьте боту фото как файл!</b>', reply_markup=keyboards.to_kbi())
         await state.update_data({'delete': [msg.message_id] if 'delete' not in data else [*data['delete'], msg.message_id]})
         return
     img = BytesIO()
@@ -55,4 +55,4 @@ async def steganography_handler(message: Message, state: FSMContext):
         media_groups.append(media_group)
     for media_group in media_groups:
         await message.answer_media_group(media_group.build())
-    await message.answer("Готово.", reply_markup=await keyboards.to_kbi())
+    await message.answer("Готово.", reply_markup=keyboards.to_kbi())

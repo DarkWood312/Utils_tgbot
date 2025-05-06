@@ -112,44 +112,83 @@ class ChepyExtra(Chepy):
 class ChepyTool(StatesGroup):
     main = State()
 
-async def build_methods_keyboard(c, page: int = 0, page_size: int = 10) -> InlineKeyboardMarkup:
-    methods = c.available_methods
-    start = page * page_size
-    end = start + page_size
-    page_methods = methods[start:end]
 
+def letter_methods(methods: list[str]):
+    methods.sort()
+    result = {}
+
+    # Group methods by first letter
+    letter_groups = {}
+    for method in methods:
+        first_letter = method[0]
+        if first_letter not in letter_groups:
+            letter_groups[first_letter] = []
+        letter_groups[first_letter].append(method)
+
+    current_key = ""
+    current_methods = []
+
+    for letter in sorted(letter_groups.keys()):
+        methods_for_letter = letter_groups[letter]
+
+        if len(methods_for_letter) > 20:
+            for i in range(0, len(methods_for_letter), 20):
+                chunk = methods_for_letter[i:i + 20]
+                chunk_key = f"{letter}{i // 20 + 1}" if i > 0 else letter
+                result[chunk_key] = chunk
+        else:
+            if current_methods and len(current_methods) + len(methods_for_letter) > 20:
+                result[current_key] = current_methods
+                current_key = letter
+                current_methods = methods_for_letter
+            else:
+                if not current_key:
+                    current_key = letter
+                else:
+                    current_key += letter
+                current_methods.extend(methods_for_letter)
+
+    # Add the last group if it exists
+    if current_methods:
+        result[current_key] = current_methods
+
+    return result
+
+def build_methods_keyboard(c, current_letter_group: str = None) -> InlineKeyboardMarkup:
+    all_methods = c._list_methods_without_additional_args()
     kb = InlineKeyboardBuilder()
 
-    # add method buttons
-    for method in page_methods:
-        kb.row(
+    letter_groups = letter_methods(all_methods)
+
+    if current_letter_group and current_letter_group in letter_groups:
+        methods = letter_groups[current_letter_group]
+
+        for method in methods:
+            kb.row(
+                InlineKeyboardButton(
+                    text=method,
+                    callback_data=f"chepy:method:{method}"
+                )
+            )
+
+    letter_buttons = []
+    for letter_group in sorted(letter_groups.keys()):
+        text = f"[{letter_group}]" if letter_group == current_letter_group else letter_group
+        letter_buttons.append(
             InlineKeyboardButton(
-                text=method,
-                callback_data=f"chepy:{page}:{method}"
+                text=text,
+                callback_data=f"chepy:letter:{letter_group}"
             )
         )
 
-    # navigation row
-    nav_buttons = []
-    if page > 0:
-        nav_buttons.append(
-            InlineKeyboardButton(
-                text="-->",
-                callback_data=f"chepy_page:{page-1}"
-            )
-        )
-    if end < len(methods):
-        nav_buttons.append(
-            InlineKeyboardButton(
-                text="<--",
-                callback_data=f"chepy_page:{page+1}"
-            )
-        )
-    if nav_buttons:
-        kb.row(*nav_buttons)
+        if len(letter_buttons) == 4:
+            kb.row(*letter_buttons)
+            letter_buttons = []
 
-    # cancel row
-    kb.row(await keyboards.canceli(True))
+    if letter_buttons:
+        kb.row(*letter_buttons)
+
+    kb.row(keyboards.canceli(True))
 
     return kb.as_markup()
 
@@ -158,7 +197,7 @@ async def build_methods_keyboard(c, page: int = 0, page_size: int = 10) -> Inlin
 async def chepy_start_handler(message: Message, state: FSMContext):
     data = await state.get_data()
     if not message.text:
-        msg = await message.answer('<b>Отправьте боту текст!</b>', reply_markup=await keyboards.to_kbi())
+        msg = await message.answer('<b>Отправьте боту текст!</b>', reply_markup=keyboards.to_kbi())
         await state.update_data({'delete': [msg.message_id] if 'delete' not in data else [*data['delete'], msg.message_id]})
         return
 
@@ -166,7 +205,7 @@ async def chepy_start_handler(message: Message, state: FSMContext):
     await state.update_data({'chepy': c})
 
     await message.answer(f"<code>{html.escape(str(message.text))}</code>\n"
-                               "<b>Выберите действие:</b>", reply_markup=await build_methods_keyboard(c))
+                               "<b>Выберите действие:</b>", reply_markup=build_methods_keyboard(c))
     # await state.update_data({'remove_msg': msg})
 
 
@@ -174,50 +213,59 @@ async def chepy_callback_handler(call: CallbackQuery, state: FSMContext):
     try:
         data = await state.get_data()
         c: ChepyExtra = data.get('chepy')
-        if call.data.startswith("chepy_page"):
-            markup = await build_methods_keyboard(c, int(call.data.split('chepy_page:')[1]))
-            await call.message.edit_reply_markup(reply_markup=markup)
-            return
+
         # if not c:
         #     await call.answer("Сначала отправьте текст!")
         #     return
-        # if method not in c.available_methods:
-        #     await call.answer("Метод не найден!")
-        #     return
-        way, page, method = call.data.split(':')
-        result: ChepyExtra = getattr(c, method)()
-        formatted_result = result.o
 
+        action_parts = call.data.split(':')
+        action_type = action_parts[1]
 
-        if isinstance(formatted_result, dict):
-            formatted_result = "\n".join(f"<b>{html.escape(str(k))}</b>: <code>{html.escape(v.decode())}</code>" for k, v in formatted_result.items())
-        elif isinstance(formatted_result, bytes):
-            formatted_result = f"<code>{html.escape(formatted_result.decode())}</code>"
+        if action_type == "letter":
+            letter_group = action_parts[2]
+            await call.message.edit_reply_markup(reply_markup=build_methods_keyboard(c, letter_group))
+            await call.answer()
+            return
 
-        reply_markup = InlineKeyboardBuilder()
-        for method in c.available_methods:
-            reply_markup.row(InlineKeyboardButton(text=method, callback_data=f'chepy:{method}'))
-        reply_markup.row(await keyboards.canceli(True))
+        elif action_type == "method":
+            method = action_parts[2]
 
-        def make_history(hist: typing.Sequence[bytes]):
-            # if isinstance(hist, dict):
-            #     return f"<code>{html.escape("<dict>")}</code>"
-            text = "<code>"
-            for h in hist:
-                if isinstance(h, dict):
-                    h = b"<dict>"
-                text += f"{html.escape(h.decode())}</code>, <code>"
-            text = text[:-8]
-            return text
+            if method not in c._list_methods_without_additional_args():
+                await call.answer("Метод не найден!")
+                return
 
+            result: ChepyExtra = getattr(c, method)()
+            formatted_result = result.o
 
-        await call.message.edit_text(f"{formatted_result}\n"
-                                     f"История: {make_history(c.get_history)}", reply_markup=await build_methods_keyboard(c, int(page)))
-        await state.update_data({'chepy': result})
-        # if 'remove_msg' in data and data['remove_msg']:
-        #     await data['remove_msg'].delete()
+            if isinstance(formatted_result, dict):
+                formatted_result = "\n".join(
+                    f"<b>{html.escape(str(k))}</b>: <code>{html.escape(v.decode())}</code>" for k, v in
+                    formatted_result.items())
+            elif isinstance(formatted_result, bytes):
+                formatted_result = f"<code>{html.escape(formatted_result.decode())}</code>"
+
+            def make_history(hist: typing.Sequence[bytes]):
+                text = "<code>"
+                for h in hist:
+                    if isinstance(h, dict):
+                        h = b"<dict>"
+                    text += f"{html.escape(h.decode())}</code>, <code>"
+                text = text[:-8]
+                return text
+
+            await call.message.edit_text(
+                f"{formatted_result}\n"
+                f"История: {make_history(c.get_history)}",
+                reply_markup=build_methods_keyboard(c)
+            )
+            await state.update_data({'chepy': result})
+
+        elif action_type == "cancel":
+            await state.clear()
+            await call.message.edit_text("Операция отменена")
 
         await call.answer()
+
     except Exception as e:
         await call.answer(f"Произошла ошибка. Возможно, вы выбрали неверный метод.\n{e}")
         return
