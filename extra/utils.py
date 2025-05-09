@@ -231,12 +231,14 @@ async def get_menu_text(session: aiohttp.ClientSession | None = None) -> str:
         current_currency = {'last_update': datetime.now(),
                             'usd_rub': await c.get_currency('usd'),
                             'btc_usd': await c.get_currency('btc', 'usd'),
-                            'btc_rub': await c.get_currency('btc', 'rub')}
+                            'btc_rub': await c.get_currency('btc', 'rub'),
+                            'eur_rub': await c.get_currency('eur')}
         if not session:
             await sess.close()
     return f'''<b>Меню: </b>\n
 <b>Курс</b>:
 <b>USD/RUB</b>: <code>{current_currency['usd_rub']}</code> ₽
+<b>EUR/RUB</b>: <code>{current_currency['eur_rub']}</code> ₽
 <b>BTC/USD(RUB)</b>: <code>{current_currency['btc_usd']}</code> $ (<code>{current_currency['btc_rub']}</code> ₽)'''
 
 async def host_text(text: str, session: aiohttp.ClientSession | None = None) -> str:
