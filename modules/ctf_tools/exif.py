@@ -23,7 +23,7 @@ def format_exif_data(raw: dict[str, Any], text_formatting = True):
 async def exif_handler(message: Message, state: FSMContext):
     data = await state.get_data()
     if not message.document:
-        msg = await message.answer('<b>Отправьте боту фото как файл!</b>', reply_markup=await keyboards.to_kbi())
+        msg = await message.answer('<b>Отправьте боту фото как файл!</b>', reply_markup=keyboards.to_kbi())
         await state.update_data(
             {'delete': [msg.message_id] if 'delete' not in data else [*data['delete'], msg.message_id]})
         return
@@ -35,7 +35,7 @@ async def exif_handler(message: Message, state: FSMContext):
     formatted = format_exif_data(exif_data)
 
     if not formatted:
-        await message.answer('<b>В файле не было найдено метаданных</b>', reply_markup=await keyboards.to_kbi())
+        await message.answer('<b>В файле не было найдено метаданных</b>', reply_markup=keyboards.to_kbi())
         return
     if len(formatted) > 4000:
         await message.answer(await utils.host_text(format_exif_data(exif_data, False)))

@@ -46,7 +46,7 @@ async def commandstart(message: Message, state: FSMContext):
     await utils.state_clear(state, chat_id=message.chat.id)
     if not await sql.get_user(message.from_user.id):
         await sql.add_user(message.from_user.id)
-    await message.answer(await utils.get_menu_text(), reply_markup=await kb.menui())
+    await message.answer(await utils.get_menu_text(), reply_markup=kb.menui())
 
 
 # @dp.message(Command(commands='settings'))
@@ -95,7 +95,7 @@ async def cancel_callback(call: CallbackQuery, state: FSMContext):
     if 'edit' in data and 'to_kwargs' in data:
         await data['edit'].edit_text(**data['to_kwargs'])
     else:
-        await call.message.edit_text(await utils.get_menu_text(), reply_markup=await kb.menui())
+        await call.message.edit_text(await utils.get_menu_text(), reply_markup=kb.menui())
     await call.answer()
 
 
@@ -163,11 +163,11 @@ async def callback(call: CallbackQuery, state: FSMContext):
             case 'menu':
                 await utils.state_clear(state, chat_id=call.message.chat.id)
                 await call.message.edit_text(await utils.get_menu_text())
-                await call.message.edit_reply_markup(reply_markup=await kb.menui())
+                await call.message.edit_reply_markup(reply_markup=kb.menui())
             case 'downloader':
                 downloader_markup = InlineKeyboardBuilder()
                 downloader_markup.row(InlineKeyboardButton(text='Настройки: ', callback_data='downloader:settings'))
-                downloader_markup.row(await kb.to_kbi(True))
+                downloader_markup.row(kb.to_kbi(True))
                 await call.message.edit_text(utils.format_tool_description('Загрузчик',
                                                                            'Скиньте мне ссылку на видео / аудио файл с ютуба, вк, одноклассников, рутюба, тиктока и др. а я попробую его скачать'),
                                              reply_markup=downloader_markup.as_markup())
@@ -175,37 +175,37 @@ async def callback(call: CallbackQuery, state: FSMContext):
             case 'url_shortener':
                 msg = await call.message.edit_text(
                     utils.format_tool_description('Сокращатель ссылок', 'Отправьте ссылку, которую нужно сократить'),
-                    reply_markup=await kb.to_kbi())
+                    reply_markup=kb.to_kbi())
                 await state.set_state(UrlShortener.url_prompt)
                 await state.update_data({'edit': msg})
 
             case 'get_file_direct_url':
                 await call.message.edit_text(utils.format_tool_description('Прямая ссылка на файл',
                                                                            f'Отправьте файл (<{1000 if constants.max_file_size_download == -1 else constants.max_file_size_download} МБ) для получения прямой ссылки на него.'),
-                                             reply_markup=await kb.to_kbi())
+                                             reply_markup=kb.to_kbi())
 
             case 'ctf_tools':
-                await call.message.edit_text("<b>CTF Tools</b>", reply_markup=await kb.ctf_toolsi())
+                await call.message.edit_text("<b>CTF Tools</b>", reply_markup=kb.ctf_toolsi())
     elif call.data.startswith("ctf_tools:"):
         setting, value = call.data.split(':', 1)
         match value:
             case 'base':
                 await call.message.edit_text(utils.format_tool_description('Перевод в другую СС',
                                                                            'Отправьте число или число с \'_\' в конце если оно имеет буквы'),
-                                             reply_markup=await kb.to_kbi(text='Обратно', callback_data='menu:ctf_tools'))
+                                             reply_markup=kb.to_kbi(text='Обратно', callback_data='menu:ctf_tools'))
             case 'binwalk':
-                await call.message.edit_text(utils.format_tool_description("Binwalk", "Инструмент для анализа файлов. Отправьте боту файл (до 20 МБ из-за ограничения телеграмма)"), reply_markup=await canceli())
+                await call.message.edit_text(utils.format_tool_description("Binwalk", "Инструмент для анализа файлов. Отправьте боту файл (до 20 МБ из-за ограничения телеграмма)"), reply_markup=canceli())
                 await state.set_state(Binwalk.wait_for_file)
             case 'steganography':
-                await call.message.edit_text(utils.format_tool_description("Stegsolve", "Инструмент для анализа изображений. Отправьте боту фото как файл (до 20 МБ из-за ограничения телеграмма)"), reply_markup=await canceli())
+                await call.message.edit_text(utils.format_tool_description("Stegsolve", "Инструмент для анализа изображений. Отправьте боту фото как файл (до 20 МБ из-за ограничения телеграмма)"), reply_markup=canceli())
                 await state.set_state(Steganography.wait_for_file)
             case 'chepy':
-                await call.message.edit_text(utils.format_tool_description("Анализ данных", "Инструмент для анализа данных в виде текста"), reply_markup=await canceli())
+                await call.message.edit_text(utils.format_tool_description("Анализ данных", "Инструмент для анализа данных в виде текста"), reply_markup=canceli())
                 await state.set_state(ChepyTool.main)
             case 'exif':
                 await call.message.edit_text(
                     utils.format_tool_description("Получение метаданных", "Инструмент для получения метаданных файла. Отправьте боту фото как файл (до 20 МБ из-за ограничения телеграмма)"),
-                    reply_markup=await canceli())
+                    reply_markup=canceli())
                 await state.set_state(Exif.wait_for_file)
 
 
