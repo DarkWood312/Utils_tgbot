@@ -225,7 +225,7 @@ def to_supb(text, option: Literal['sub', 'sup']):
 current_currency = {}
 async def get_menu_text(session: aiohttp.ClientSession | None = None) -> str:
     global current_currency
-    if (current_currency == {}) or (current_currency['last_update'] - datetime.now() > timedelta(minutes=10)):
+    if (not current_currency) or (datetime.now() - current_currency['last_update'] > timedelta(minutes=10)):
         sess = session or aiohttp.ClientSession()
         c = Currency(sess)
         current_currency = {'last_update': datetime.now(),
