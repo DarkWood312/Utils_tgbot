@@ -4,9 +4,10 @@ import io
 import logging
 import re
 import string
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, fields
 from datetime import timedelta, datetime
 from typing import *
+
 import aiohttp
 import filetype
 from aiogram.client.session.aiohttp import AiohttpSession
@@ -249,3 +250,7 @@ async def host_text(text: str, session: aiohttp.ClientSession | None = None) -> 
         await sess.close()
     return rdata
 
+def fill_in_dataclass(fill: dict, dataclass_: dataclass, **additional_fields):
+    valid_fields = [field.name for field in fields(dataclass_)]
+    filtered = {k: v for k, v in fill.items() if k in valid_fields} | additional_fields
+    return dataclass_(**filtered)
