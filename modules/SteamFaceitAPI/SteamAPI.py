@@ -1,8 +1,7 @@
-from .objects import *
+from .objects.steam import SteamUser
 import aiohttp
 
-from extra.utils import fill_in_dataclass
-
+from .utils import fill_in_dataclass
 
 
 
