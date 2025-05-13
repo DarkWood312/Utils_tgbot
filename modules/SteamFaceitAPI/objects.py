@@ -2,6 +2,20 @@ from dataclasses import dataclass
 from typing import *
 from datetime import datetime
 
+def post_init_wrapper(cls):
+    original_post = getattr(cls, "__post_init__", None)
+
+    def __post_init__(self, *args, **kwargs):
+        if original_post:
+            original_post(self, *args, **kwargs)
+
+        url = getattr(self, "faceit_url", None)
+        if url is not None:
+            object.__setattr__(self, "faceit_url", url.replace("{lang}", "ru"))
+
+    cls.__post_init__ = __post_init__
+    return cls
+
 @dataclass(frozen=True)
 class SteamUser:
     steamid: str
@@ -45,26 +59,46 @@ class FaceitMatchResults:
     winner: str
 
 @dataclass(frozen=True)
+@post_init_wrapper
 class FaceitMatchPlayer:
     avatar: str
-    faceit_url: str
     game_player_id: str
     game_player_name: str
     nickname: str
     player_id: str
     skill_level: int
-
-    def __post_init__(self):
-        object.__setattr__(self, "faceit_url", self.faceit_url.replace('{lang}', 'ru'))
+    faceit_url: Optional[str] = None
+    membership: Optional[str] = None
 
 @dataclass(frozen=True)
-class FaceitTeam:
+class FaceitTeamStats:
+    winProbability: float
+    rating: int
+    skill_level_avg: int
+    skill_level_min: int
+    skill_level_max: int
+
+@dataclass(frozen=True)
+class FaceitMatchTeamFromPlayer:
     avatar: str
     nickname: str
     players: list[FaceitMatchPlayer]
     team_id: str
     type: str
     game_team_id: Optional[str] = None
+
+@dataclass(frozen=True)
+class FaceitMatchTeamFromMatch:
+    faction_id: str
+    leader: str
+    avatar: str
+    roster: list[FaceitMatchPlayer]
+    stats: FaceitTeamStats
+    substituted: bool
+    name: str
+    type: str
+    game_team_id: Optional[str] = None
+
 
 @dataclass(frozen=True)
 class FaceitMatchPlayerStats:
@@ -156,7 +190,34 @@ class FaceitMatchPlayerStats:
         )
 
 @dataclass(frozen=True)
-class FaceitMatch:
+@post_init_wrapper
+class FaceitMatchFromMatch:
+    match_id: str
+    version: int
+    game: str
+    region: str
+    competition_id: str
+    competition_type: str
+    competition_name: str
+    organizer_id: str
+    teams: list[FaceitMatchTeamFromPlayer]
+    map_pick: list[str]
+    location_pick: list[str]
+    calculate_elo: bool
+    configured_at: int
+    started_at: int
+    finished_at: int
+    demo_url: List[str]
+    chat_room_id: str
+    best_of: int
+    results: FaceitMatchResults
+    # detailed_results: List[DetailedResult]
+    status: str
+    faceit_url: str
+
+@dataclass(frozen=True)
+@post_init_wrapper
+class FaceitMatchFromPlayer:
     competition_id: str
     competition_name: str
     competition_type: str
@@ -173,11 +234,11 @@ class FaceitMatch:
     results: FaceitMatchResults
     started_at: datetime | int
     status: str
-    teams: list[FaceitTeam]
+    teams: list[FaceitMatchTeamFromPlayer]
     teams_size: int
 
+
     def __post_init__(self):
-        object.__setattr__(self, "faceit_url", self.faceit_url.replace('{lang}', 'ru'))
         if isinstance(self.finished_at, int):
             object.__setattr__(self, "finished_at", datetime.fromtimestamp(self.finished_at))
         if isinstance(self.started_at, int):
@@ -186,6 +247,7 @@ class FaceitMatch:
 
 
 @dataclass(frozen=True)
+@post_init_wrapper
 class FaceitUser:
     player_id: str
     nickname: str
@@ -203,6 +265,3 @@ class FaceitUser:
     steam_nickname: str
     verified: bool
     friends: Optional[list["FaceitUser"]] | None = None
-
-    def __post_init__(self):
-        object.__setattr__(self, "faceit_url", self.faceit_url.replace('{lang}', 'ru'))

@@ -39,6 +39,22 @@ class AsyncFaceit:
             formatted_data['friends'] = friends
         return fill_in_dataclass(formatted_data, FaceitUser)
 
+    # async def _get_match(self, match: dict):
+    #     # match['started_at'] = datetime.fromtimestamp(match['started_at'])
+    #     # match['finished_at'] = datetime.fromtimestamp(match['finished_at'])
+    #     for game_team_id, team in match['teams'].items():
+    #         players = []
+    #         for player in team['players']:
+    #             players.append(FaceitMatchPlayer(**player))
+    #         match['teams'][game_team_id]['players'] = players
+    #         # match['teams'][game_team_id]['game_team_id'] = game_team_id
+    #     # match['teams'] = [FaceitTeam(**team) for team in match['teams'].values()]
+    #     match['teams'] = [fill_in_dataclass(team, FaceitTeam, game_team_id=game_team_id) for game_team_id, team in
+    #                       match['teams'].items()]
+    #     # match['results'] = FaceitMatchResults(**match['results'])
+    #     match['results'] = fill_in_dataclass(match['results'], FaceitMatchResults)
+
+
     async def get_player_by_faceit_id(self, faceit_id: str, add_friends_field: bool = False, demon_mode: bool = False):
         response = await self._request(f'/players/{faceit_id}')
         return await self._get_player(response, add_friends_field, demon_mode)
@@ -47,14 +63,14 @@ class AsyncFaceit:
         response = await self._request(f'/players', game=game, game_player_id=game_player_id)
         return await self._get_player(response, add_friends_field, demon_mode)
 
-    async def get_matches_of_player_by_faceit_id(self, faceit_id: str, game: str, from_: datetime = datetime.now() - timedelta(days=30), to: datetime = datetime.now(), offset: int = 0, limit: int = 20) -> list[FaceitMatch]:
+    async def get_matches_of_player_by_faceit_id(self, faceit_id: str, game: str, from_: datetime = datetime.now() - timedelta(days=30), to: datetime = datetime.now(), offset: int = 0, limit: int = 20) -> list[FaceitMatchFromPlayer]:
         from_ = from_.timestamp()
         to = to.timestamp()
         response = await self._request(f"/players/{faceit_id}/history", game=game, **{"from": from_} ,to=to, offset=offset, limit=limit)
         matches = []
         for match in response['items']:
-            match['started_at'] = datetime.fromtimestamp(match['started_at'])
-            match['finished_at'] = datetime.fromtimestamp(match['finished_at'])
+            # match['started_at'] = datetime.fromtimestamp(match['started_at'])
+            # match['finished_at'] = datetime.fromtimestamp(match['finished_at'])
             for game_team_id, team in match['teams'].items():
                 players = []
                 for player in team['players']:
@@ -62,10 +78,12 @@ class AsyncFaceit:
                 match['teams'][game_team_id]['players'] = players
                 # match['teams'][game_team_id]['game_team_id'] = game_team_id
             # match['teams'] = [FaceitTeam(**team) for team in match['teams'].values()]
-            match['teams'] = [fill_in_dataclass(team, FaceitTeam, game_team_id=game_team_id) for game_team_id, team in match['teams'].items()]
+            match['teams'] = [fill_in_dataclass(team, FaceitMatchTeamFromPlayer, game_team_id=game_team_id) for game_team_id, team in
+                              match['teams'].items()]
             # match['results'] = FaceitMatchResults(**match['results'])
             match['results'] = fill_in_dataclass(match['results'], FaceitMatchResults)
-            matches.append(fill_in_dataclass(match, FaceitMatch))
+
+            matches.append(fill_in_dataclass(match, FaceitMatchFromPlayer))
 
         return matches
 
@@ -87,4 +105,29 @@ class AsyncFaceit:
         return statistics
 
     async def get_match_by_match_id(self, match_id: str):
-        response = await self._request(f"/matches/{match_id}")
+        match = await self._request(f"/matches/{match_id}")
+        for game_team_id, team in match['teams'].items():
+            players = []
+            for player in team['roster']:
+                if 'game_skill_level' in player:
+                    player['skill_level'] = player['game_skill_level']
+
+                players.append(fill_in_dataclass(player, FaceitMatchPlayer))
+            match['teams'][game_team_id]['players'] = players
+
+            skill_levels = (team['stats']['skillLevel']['average'],
+                            team['stats']['skillLevel']['range']['min'],
+                            team['stats']['skillLevel']['range']['max'])
+            team['stats'] = fill_in_dataclass(team['stats'], FaceitTeamStats, skill_level_avg=skill_levels[0],
+                                               skill_level_min=skill_levels[1], skill_level_max=skill_levels[2])
+
+
+        match['teams'] = [fill_in_dataclass(team, FaceitMatchTeamFromMatch, game_team_id=game_team_id) for game_team_id, team in
+                          match['teams'].items()]
+
+        match['results'] = fill_in_dataclass(match['results'], FaceitMatchResults)
+
+        match['map_pick'] = match['voting']['map']['pick']
+        match['location_pick'] = match['voting']['location']['pick']
+
+        return fill_in_dataclass(match, FaceitMatchFromMatch)
