@@ -205,7 +205,7 @@ class AsyncFaceit:
                         zeus_kills=int(ps["Zeus Kills"]),
                         match_one_v_two_win_rate=float(ps["Match 1v2 Win Rate"]),
                         match_entry_success_rate=float(ps["Match Entry Success Rate"]),
-                        kd_ratio=float(ps["K/R Ratio"]),
+                        kr_ratio=float(ps["K/R Ratio"]),
                         utility_success_rate=float(ps["Utility Success Rate per Match"]),
                         entry_wins=int(ps["Entry Wins"]),
                         flash_count=int(ps["Flash Count"]),

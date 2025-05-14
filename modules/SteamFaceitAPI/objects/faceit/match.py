@@ -111,7 +111,7 @@ class PlayerStats:
     zeus_kills: int
     match_one_v_two_win_rate: float
     match_entry_success_rate: float
-    kd_ratio: float
+    kr_ratio: float
     utility_success_rate: float
     entry_wins: int
     flash_count: int

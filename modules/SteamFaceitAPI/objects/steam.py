@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from datetime import datetime
 from typing import *
 
 @dataclass(frozen=True)
@@ -13,11 +14,11 @@ class SteamUser:
     avatarmedium: str
     avatarfull: str
     avatarhash: str
-    lastlogoff: int
+    lastlogoff: datetime | int
     personastate: int
     # personastateflags: bool
     primaryclanid: Optional[str] = None
-    timecreated: Optional[int] = None
+    timecreated: Optional[int | datetime] = None
     gameid: Optional[int] = None
     realname: Optional[str] = None
     gameserverip: Optional[str] = None
@@ -26,3 +27,13 @@ class SteamUser:
     cityid: Optional[int] = None
     loccountrycode: Optional[str] = None
     locstatecode: Optional[str] = None
+
+    def __post_init__(self):
+        if isinstance(self.lastlogoff, int):
+            object.__setattr__(self, 'lastlogoff', datetime.fromtimestamp(self.lastlogoff))
+        if isinstance(self.timecreated, int):
+            object.__setattr__(self, 'timecreated', datetime.fromtimestamp(self.timecreated))
+
+    @property
+    def username(self):
+        return self.profileurl.split('/')[-2]
