@@ -4,9 +4,10 @@ import io
 import logging
 import re
 import string
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, fields
 from datetime import timedelta, datetime
 from typing import *
+
 import aiohttp
 import filetype
 from aiogram.client.session.aiohttp import AiohttpSession
@@ -225,18 +226,20 @@ def to_supb(text, option: Literal['sub', 'sup']):
 current_currency = {}
 async def get_menu_text(session: aiohttp.ClientSession | None = None) -> str:
     global current_currency
-    if (current_currency == {}) or (current_currency['last_update'] - datetime.now() > timedelta(minutes=10)):
+    if (not current_currency) or (datetime.now() - current_currency['last_update'] > timedelta(minutes=10)):
         sess = session or aiohttp.ClientSession()
         c = Currency(sess)
         current_currency = {'last_update': datetime.now(),
                             'usd_rub': await c.get_currency('usd'),
                             'btc_usd': await c.get_currency('btc', 'usd'),
-                            'btc_rub': await c.get_currency('btc', 'rub')}
+                            'btc_rub': await c.get_currency('btc', 'rub'),
+                            'eur_rub': await c.get_currency('eur')}
         if not session:
             await sess.close()
     return f'''<b>Меню: </b>\n
 <b>Курс</b>:
 <b>USD/RUB</b>: <code>{current_currency['usd_rub']}</code> ₽
+<b>EUR/RUB</b>: <code>{current_currency['eur_rub']}</code> ₽
 <b>BTC/USD(RUB)</b>: <code>{current_currency['btc_usd']}</code> $ (<code>{current_currency['btc_rub']}</code> ₽)'''
 
 async def host_text(text: str, session: aiohttp.ClientSession | None = None) -> str:
@@ -247,3 +250,7 @@ async def host_text(text: str, session: aiohttp.ClientSession | None = None) -> 
         await sess.close()
     return rdata
 
+def fill_in_dataclass(fill: dict, dataclass_: dataclass, **additional_fields):
+    valid_fields = [field.name for field in fields(dataclass_)]
+    filtered = {k: v for k, v in fill.items() if k in valid_fields} | additional_fields
+    return dataclass_(**filtered)

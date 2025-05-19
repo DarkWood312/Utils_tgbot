@@ -22,6 +22,10 @@ sql_password = os.getenv('SQL_PASSWORD')
 dl_api_key = os.getenv('DL_API_KEY')
 
 tg_api_server = os.getenv('TG_API_SERVER')
+
+steam_api_key = os.getenv('STEAM_API_KEY')
+faceit_api_key = os.getenv('FACEIT_API_KEY')
+
 sql = DB(host=sql_host, port=int(sql_port), user=sql_user, database=sql_database, password=sql_password)
 
 try:
@@ -33,3 +37,4 @@ try:
     get_file_direct_url_status = True if 200 <= requests.get('https://pomf.lain.la/').status_code <= 299 else False
 except ConnectTimeout:
     get_file_direct_url_status = False
+
