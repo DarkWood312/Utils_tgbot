@@ -1,39 +1,34 @@
 import asyncio
 import html
-import io
 import logging
 import string
 
 import aiohttp
-from aiogram import Bot, Dispatcher, types, F
-from aiogram.enums import ParseMode, ChatAction
+from aiogram import Dispatcher, F
 from aiogram.filters import CommandStart, Command, CommandObject
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.storage.memory import MemoryStorage
-from aiogram.methods import DeleteWebhook
-from aiogram.types import Message, InlineKeyboardButton, BufferedInputFile, CallbackQuery, Update, InlineKeyboardMarkup, \
-    InlineQuery, InlineQueryResult, InlineQueryResultArticle, InputMessageContent, InputTextMessageContent, \
-    InputMediaDocument, InputMediaVideo, InputMediaAudio, BotCommand, BotCommandScopeDefault
+from aiogram.types import Message, InlineKeyboardButton, BufferedInputFile, CallbackQuery, BotCommand, \
+    BotCommandScopeDefault
 from aiogram.utils.chat_action import ChatActionSender
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.webhook.aiohttp_server import SimpleRequestHandler, setup_application
 from aiohttp import web
-from modules.ctf_tools.chepytool import ChepyTool
-from filetype import filetype
 
-from extra.constants import bot
 import extra.keyboards as kb
-from extra.config import *
 from extra import utils, config, constants
+from extra.config import *
+from extra.constants import bot
 from extra.inline_queries import register_queries
 from extra.keyboards import canceli
 from extra.middlewares import register_middlewares
-from modules.ctf_tools.binwalk import binwalk_handler, Binwalk
+from extra.utils import format_file_description
+from modules.ctf_tools.binwalk import Binwalk
+from modules.ctf_tools.chepytool import ChepyTool
 from modules.ctf_tools.exif import Exif
 from modules.ctf_tools.steganography import Steganography
 from modules.handlers import register_handlers
 from modules.url_shortener import UrlShortener
-from extra.utils import match_url, format_file_description
 
 dp = Dispatcher(storage=MemoryStorage())
 
@@ -48,16 +43,6 @@ async def commandstart(message: Message, state: FSMContext):
         await sql.add_user(message.from_user.id)
     await message.answer(await utils.get_menu_text(), reply_markup=kb.menui())
 
-
-# @dp.message(Command(commands='settings'))
-# async def settings_cmd(message: Message):
-#     settings = await sql.get_user_settings(message.from_user.id)
-#     markup = InlineKeyboardBuilder()
-#     for k, v in settings.items():
-#         k = str(k)
-#         v = str(v)
-#         markup.row(InlineKeyboardButton(text=k, callback_data=k), InlineKeyboardButton(text=v, callback_data=k))
-#     await message.answer('Настройки: ', reply_markup=markup.as_markup())
 
 @dp.message(Command(commands=['short_url', 'su', 'url']))
 async def short_url_cmd(message: Message, command: CommandObject):

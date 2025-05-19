@@ -23,7 +23,6 @@ class ChepyExtra(Chepy):
         self.history = []
         self._recording_enabled = True
 
-        #TODO
         self.available_methods = ('to_hex', 'from_hex', 'bruteforce_from_base_xx', 'bruteforce_to_base_xx', 'to_binary', 'from_binary',)
         self.banned_methods = ('')
 
