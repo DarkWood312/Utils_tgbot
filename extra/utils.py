@@ -116,7 +116,7 @@ async def download(url: str, api_key: str, callback_status: Callable = None,
     :return: buffer
     """
     async with aiohttp.ClientSession() as session:
-        async with session.post('https://dl.dwip.pro',
+        async with session.post('https://dl.dwip.fun',
                                 headers={'Accept': 'application/json', 'Content-Type': 'application/json',
                                          'Authorization': f'Api-Key {api_key}'}
                 , json={'url': url, **kwargs}) as response:
