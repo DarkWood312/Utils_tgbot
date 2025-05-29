@@ -15,6 +15,7 @@ from cryptography.fernet import Fernet
 from aiogram.fsm.context import FSMContext
 
 from extra import constants, config
+from extra.config import dl_api_url
 from modules.currency import Currency
 
 
@@ -116,7 +117,7 @@ async def download(url: str, api_key: str, callback_status: Callable = None,
     :return: buffer
     """
     async with aiohttp.ClientSession() as session:
-        async with session.post('https://dl.dwip.fun',
+        async with session.post(dl_api_url,
                                 headers={'Accept': 'application/json', 'Content-Type': 'application/json',
                                          'Authorization': f'Api-Key {api_key}'}
                 , json={'url': url, **kwargs}) as response:

@@ -10,6 +10,7 @@ from modules.SteamFaceitAPI.FaceitAPI import AsyncFaceit
 import extra.utils as utils
 from extra.config import steam_api_key, faceit_api_key
 from modules.SteamFaceitAPI import AsyncSteam
+from modules.SteamFaceitAPI.objects.steam import SteamUser
 
 
 class SteamFaceitFinder(StatesGroup):
@@ -36,7 +37,7 @@ def base62_to_int(s):
         n = n * 62 + alphabet.index(c)
     return n
 
-async def return_steam_obj(text: str, session: aiohttp.ClientSession):
+async def return_steam_obj(text: str, session: aiohttp.ClientSession) -> SteamUser:
     steam = AsyncSteam(steam_api_key, session)
     if is_steamid64(text):
         return (await steam.getplayersummaries(text))[0]
@@ -48,12 +49,30 @@ async def return_steam_obj(text: str, session: aiohttp.ClientSession):
 
     return await steam.search_user(username)
 
+def make_info_text(init_text = '', **kwargs):
+    text = init_text
+    for k, v in kwargs.items():
+        if v:
+            text += f'<b>{k}:</b> {v}\n'
+
+    return text
+
 async def steam_faceit_finder(message: Message, state: FSMContext):
     async with aiohttp.ClientSession() as session:
         steamobj = await return_steam_obj(message.text, session)
         faceit = AsyncFaceit(faceit_api_key, session)
-        text = f'''{steamobj.profileurl}
-        <b>Имя:</b> {steamobj.personaname}
-        '''
+        kwargs = {
+            'Ник': steamobj.personaname,
+            'Профиль': 'Открыт✅' if steamobj.profilestate else 'Закрыт❌',
+            'Последний раз был в сети': f'{steamobj.lastlogoff:%d-%m-%Y %H:%M:%S}' if steamobj.lastlogoff else None,
+            'Статус': steamobj.current_status,
+            'Аккаунт был создан': f'{steamobj.timecreated:%d-%m-%Y %H:%M:%S}' if steamobj.timecreated else None,
+            'Имя': steamobj.realname,
+            'Страна': steamobj.loccountrycode,
+            'Город': f'{steamobj.loccityid} | {steamobj.cityid}' if (steamobj.loccityid or steamobj.cityid) else None,
+            'IP игрового сервера': steamobj.gameserverip,
+
+            }
+        text = make_info_text(f'{steamobj.profileurl}\n')
 
 

@@ -239,3 +239,4 @@ class AsyncFaceit:
             ))
 
         return MatchData(rounds=rounds)
+

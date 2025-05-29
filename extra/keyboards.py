@@ -7,7 +7,7 @@ from extra import config, utils
 
 def menui() -> InlineKeyboardMarkup:
     markup = InlineKeyboardBuilder()
-    if config.dl_api_key:
+    if config.dl_api_key and config.dl_api_url_status:
         markup.row(InlineKeyboardButton(text='Загрузчик', callback_data='menu:downloader'))
     if config.url_shortener_status:
         markup.row(InlineKeyboardButton(text='Сокращатель ссылок', callback_data='menu:url_shortener'))

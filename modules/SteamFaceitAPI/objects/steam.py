@@ -15,7 +15,7 @@ class SteamUser:
     avatarfull: str
     avatarhash: str
     lastlogoff: datetime | int
-    personastate: int
+    personastate: int | str
     # personastateflags: bool
     primaryclanid: Optional[str] = None
     timecreated: Optional[int | datetime] = None
@@ -37,3 +37,23 @@ class SteamUser:
     @property
     def username(self):
         return self.profileurl.split('/')[-2]
+
+    @property
+    def current_status(self):
+        match self.personastate:
+            case 0:
+                return 'offline'
+            case 1:
+                return 'online'
+            case 2:
+                return 'busy'
+            case 3:
+                return 'away'
+            case 4:
+                return 'snooze'
+            case 5:
+                return 'looking for trade'
+            case 6:
+                return 'looking to play'
+            case _:
+                return None

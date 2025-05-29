@@ -20,6 +20,7 @@ sql_database = os.getenv('SQL_DATABASE')
 sql_password = os.getenv('SQL_PASSWORD')
 
 dl_api_key = os.getenv('DL_API_KEY')
+dl_api_url = os.getenv('DL_API_URL')
 
 tg_api_server = os.getenv('TG_API_SERVER')
 
@@ -30,11 +31,15 @@ sql = DB(host=sql_host, port=int(sql_port), user=sql_user, database=sql_database
 
 try:
     url_shortener_status = True if 200 <= requests.get('https://spoo.me').status_code <= 299 else False
-except ConnectTimeout:
+except:
     url_shortener_status = False
 
 try:
     get_file_direct_url_status = True if 200 <= requests.get('https://pomf.lain.la/').status_code <= 299 else False
-except ConnectTimeout:
+except:
     get_file_direct_url_status = False
 
+try:
+    dl_api_url_status = True if 200 <= requests.get(dl_api_url).status_code <= 399 else False
+except:
+    dl_api_url_status = False
