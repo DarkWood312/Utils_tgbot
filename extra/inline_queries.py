@@ -50,14 +50,13 @@ async def url_query(inline_query: InlineQuery):
                 result = InlineQueryResultArticle(id='dl', title=html.escape(content.filename),
                                                   input_message_content=InputTextMessageContent(
                                                       message_text=f'{await content.get_short_url() or content.url}\n{utils.format_file_description(content.mimetype, content.filesize_bytes / 1024 / 1024 if content.filesize_bytes else None, 'МБ', content.filename)}'))
-
+                results.append(result)
             except utils.DownloadError as e:
                 # result = InlineQueryResultArticle(id='dl', title=html.escape(str(e)),
                 #                                   input_message_content=InputTextMessageContent(message_text=';('))
                 pass
 
             # results = results[:-1]
-            results.append(result)
         await inline_query.answer(results=results, cache_time=0)
 
 async def other_query(inline_query: InlineQuery):
