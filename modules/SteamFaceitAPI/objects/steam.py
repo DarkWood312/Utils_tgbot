@@ -8,15 +8,15 @@ class SteamUser:
     communityvisibilitystate: int
     profilestate: bool
     personaname: str
-    commentpermission: bool
     profileurl: str
     avatar: str
     avatarmedium: str
     avatarfull: str
     avatarhash: str
-    lastlogoff: datetime | int
     personastate: int | str
     # personastateflags: bool
+    lastlogoff: datetime | int | None = None
+    commentpermission: bool | None = None
     primaryclanid: Optional[str] = None
     timecreated: Optional[int | datetime] = None
     gameid: Optional[int] = None

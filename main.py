@@ -140,7 +140,7 @@ async def callback(call: CallbackQuery, state: FSMContext):
         if value in ('true', 'false'):
             value = True if value == 'true' else False
 
-        await sql.change_user_setting(call.from_user.id, setting, value)
+        await sql.change_user_setting(call.from_user.id, setting.lower(), value)
         await call.answer('Успешно!')
     elif call.data.startswith('menu:'):
         setting, value = call.data.split(':', 1)
@@ -242,6 +242,7 @@ async def text(message: Message):
         try:
             msg = await message.answer('<b>Скачивание...</b>')
             content = await utils.download(body, dl_api_key, None, **settings)
+
             if content.buffer:
                 buffer = content.buffer
                 buffer_val = buffer.read()
@@ -277,8 +278,8 @@ async def text(message: Message):
         #     await message.answer(f'error {html.escape(type(e).__name__)} {html.escape(str(e))}')
         #     return
 
-        finally:
-            await msg.delete()
+        # finally:
+            # await msg.delete()
     elif message.text.isdigit() or message.text[-1] == '_':
         markup = InlineKeyboardBuilder()
         markup.row(InlineKeyboardButton(text='Перевод в другую СС', callback_data=f'digit:base_{message.text}'))
