@@ -9,7 +9,7 @@ from aiogram.filters import CommandStart, Command, CommandObject
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.types import Message, InlineKeyboardButton, BufferedInputFile, CallbackQuery, BotCommand, \
-    BotCommandScopeDefault
+    BotCommandScopeDefault, BotCommandScopeAllGroupChats
 from aiogram.utils.chat_action import ChatActionSender
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.webhook.aiohttp_server import SimpleRequestHandler, setup_application
@@ -298,6 +298,7 @@ async def on_startup():
     if config.url_shortener_status:
         commands.append(BotCommand(command='su', description='Сократить ссылку'))
     await bot.set_my_commands(commands, BotCommandScopeDefault())
+
     if webhook_host and webhook_path:
         await bot.set_webhook(f'{webhook_host}{webhook_path}')
 
