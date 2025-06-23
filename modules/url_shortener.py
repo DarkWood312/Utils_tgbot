@@ -3,7 +3,7 @@ import html
 import aiohttp
 from aiogram.types import Message
 
-from aiogram import Dispatcher, Router
+from aiogram import Dispatcher, Router, flags
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram import F
@@ -13,7 +13,6 @@ from extra import utils, keyboards
 
 class UrlShortener(StatesGroup):
     url_prompt = State()
-
 
 async def url_input(message: Message, state: FSMContext):
     data = await state.get_data()

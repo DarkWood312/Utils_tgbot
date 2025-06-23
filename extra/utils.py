@@ -255,3 +255,4 @@ def fill_in_dataclass(fill: dict, dataclass_: dataclass, **additional_fields):
     valid_fields = [field.name for field in fields(dataclass_)]
     filtered = {k: v for k, v in fill.items() if k in valid_fields} | additional_fields
     return dataclass_(**filtered)
+
