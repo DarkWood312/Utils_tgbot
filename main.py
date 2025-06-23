@@ -306,7 +306,8 @@ async def on_startup():
         BotCommand(command='start', description='Меню'),
         BotCommand(command='help', description='Помощь / Автор'),
         BotCommand(command='encrypt', description='Зашифровать текст'),
-        BotCommand(command='decrypt', description='Расшифровать текст')
+        BotCommand(command='decrypt', description='Расшифровать текст'),
+        BotCommand(command='make_pass', description='Сгенерировать пароль')
     ]
     if config.url_shortener_status:
         commands.append(BotCommand(command='su', description='Сократить ссылку'))
