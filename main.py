@@ -12,8 +12,10 @@ from aiogram.types import Message, InlineKeyboardButton, BufferedInputFile, Call
     BotCommandScopeDefault, BotCommandScopeAllGroupChats
 from aiogram.utils.chat_action import ChatActionSender
 from aiogram.utils.keyboard import InlineKeyboardBuilder
+from aiogram.utils.markdown import hcode
 from aiogram.webhook.aiohttp_server import SimpleRequestHandler, setup_application
 from aiohttp import web
+from base58 import b58encode
 
 import extra.keyboards as kb
 from extra import utils, config, constants
@@ -29,6 +31,7 @@ from modules.ctf_tools.exif import Exif
 from modules.ctf_tools.steganography import Steganography
 from modules.handlers import register_handlers
 from modules.url_shortener import UrlShortener
+from hashlib import blake2s
 
 dp = Dispatcher(storage=MemoryStorage())
 
@@ -65,6 +68,16 @@ async def short_url_cmd(message: Message, command: CommandObject):
 @dp.message(Command(commands=['author', 'help']))
 async def author_cmd(message: Message):
     await message.answer('<b>Автор бота / по всем вопросам писать: </b> <a href="tg://user?id=493006916">сюда</a>')
+
+@dp.message(Command(commands=['make_pass', 'mp']))
+async def blake3_cmd(message: Message, command: CommandObject):
+    if not command.args:
+        await message.answer(f'<b>Использование:</b> /{command.command} {html.escape("<Текст>")}')
+        return
+    encoded = blake2s(command.args.encode("utf-8"), digest_size=8)
+    await message.answer(hcode(encoded.hexdigest()))
+
+
 
 
 @dp.message(Command(commands='get_state'))
