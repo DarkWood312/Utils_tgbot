@@ -74,8 +74,18 @@ async def blake3_cmd(message: Message, command: CommandObject):
     if not command.args:
         await message.answer(f'<b>Использование:</b> /{command.command} {html.escape("<Текст>")}')
         return
-    encoded = blake2s(command.args.encode("utf-8"), digest_size=8)
-    await message.answer(hcode(encoded.hexdigest()))
+    encoded = blake2s(command.args.encode("utf-8"), digest_size=8).hexdigest()
+    formatted = ''
+    made_upper = False
+    for c in encoded:
+        if c.isalpha() and not made_upper:
+            formatted += c.upper()
+            made_upper = True
+        else:
+            formatted += c
+    formatted += "!"
+    await message.answer(hcode(formatted))
+    await message.delete()
 
 
 
